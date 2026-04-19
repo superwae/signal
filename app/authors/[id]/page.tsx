@@ -14,6 +14,7 @@ export default async function AuthorDetailPage({ params }: { params: { id: strin
   const id = Number(params.id);
   const [author] = await db.select().from(schema.authors).where(eq(schema.authors.id, id));
   if (!author) notFound();
+  console.log(`[author/${id}] fathomAccessToken present:`, !!author.fathomAccessToken, "email:", author.fathomUserEmail, "connectedAt:", author.fathomConnectedAt);
   const posts = await db.select().from(schema.posts).where(eq(schema.posts.authorId, id)).orderBy(desc(schema.posts.updatedAt));
   const recentEdits = await db.select().from(schema.edits).where(eq(schema.edits.authorId, id)).orderBy(desc(schema.edits.createdAt)).limit(5);
 
