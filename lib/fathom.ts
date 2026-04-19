@@ -2,9 +2,9 @@ import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 
 const FATHOM_TOKEN_URL =
-  process.env.FATHOM_TOKEN_URL ?? "https://fathom.video/oauth/token";
+  process.env.FATHOM_TOKEN_URL ?? "https://fathom.video/external/v1/oauth2/token";
 const FATHOM_API_BASE =
-  process.env.FATHOM_API_BASE_URL ?? "https://api.fathom.video/v1";
+  process.env.FATHOM_API_BASE_URL ?? "https://fathom.video/external/v1";
 
 /** Refresh + return a valid access token for the given author. */
 export async function getValidFathomToken(authorId: number): Promise<string> {

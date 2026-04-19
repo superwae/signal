@@ -3,9 +3,9 @@ import { randomBytes } from "crypto";
 import { db, schema } from "@/lib/db";
 
 const FATHOM_AUTHORIZE_URL =
-  process.env.FATHOM_AUTHORIZE_URL ?? "https://fathom.video/oauth/authorize";
+  process.env.FATHOM_AUTHORIZE_URL ?? "https://fathom.video/external/v1/oauth2/authorize";
 const FATHOM_CLIENT_ID = process.env.FATHOM_CLIENT_ID ?? "";
-const FATHOM_SCOPES = process.env.FATHOM_SCOPES ?? "read:meetings read:transcripts";
+const FATHOM_SCOPES = process.env.FATHOM_SCOPES ?? "public_api";
 const APP_BASE_URL = process.env.APP_BASE_URL ?? "https://signal-swart-one.vercel.app";
 
 export async function GET(req: NextRequest) {
