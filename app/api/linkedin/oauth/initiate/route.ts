@@ -5,8 +5,8 @@ import { db, schema } from "@/lib/db";
 const LINKEDIN_AUTHORIZE_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID ?? "";
 // openid + profile + email → OIDC (no review needed)
-// r_member_social → read post stats (requires Community Management API approval)
-const LINKEDIN_SCOPES = "openid profile email r_member_social";
+// r_member_social added automatically once Community Management API is approved
+const LINKEDIN_SCOPES = "openid profile email";
 const APP_BASE_URL = process.env.APP_BASE_URL?.trim() ?? "https://signal-umber-ten.vercel.app";
 
 export async function GET(req: NextRequest) {
