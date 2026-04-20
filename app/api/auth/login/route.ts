@@ -21,12 +21,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Wrong password." }, { status: 401 });
   }
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("signal_auth", hashToken(expected), {
-    httpOnly: true,
-    sameSite: "lax",
+  const cookieOpts = {
+    sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
-  });
+  };
+  res.cookies.set("signal_auth", hashToken(expected), { ...cookieOpts, httpOnly: true });
+  res.cookies.set("signal_email", String(email ?? "").toLowerCase(), cookieOpts);
   return res;
 }

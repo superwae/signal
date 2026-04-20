@@ -2,9 +2,19 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { LayoutDashboard, Radio, Users, BarChart3, Wrench, Sun, Moon, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
+
+function useUserEmail() {
+  const [email, setEmail] = useState("");
+  useEffect(() => {
+    const match = document.cookie.match(/(?:^|;\s*)signal_email=([^;]*)/);
+    setEmail(match ? decodeURIComponent(match[1]) : "");
+  }, []);
+  return email;
+}
 
 const items = [
   { href: "/",           label: "Dashboard",  icon: LayoutDashboard },
@@ -40,6 +50,7 @@ function SignalLogo() {
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
+  const email = useUserEmail();
 
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 min-h-screen
@@ -114,7 +125,7 @@ export function Sidebar() {
         </a>
         <div className="px-3 pt-3 pb-1">
           <div className="text-[10px] uppercase tracking-widest mb-0.5 text-gray-400 dark:text-blue-300/25">Logged in as</div>
-          <div className="text-[11px] truncate text-gray-500 dark:text-blue-200/40">waelsalameh255@gmail.com</div>
+          <div className="text-[11px] truncate text-gray-500 dark:text-blue-200/40">{email || "—"}</div>
         </div>
       </div>
     </aside>
