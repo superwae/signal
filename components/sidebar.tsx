@@ -42,17 +42,18 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 min-h-screen
-      bg-[hsl(215,52%,9%)] border-r border-[hsl(215,40%,16%)]">
+      bg-gray-100 border-r border-gray-200
+      dark:bg-[hsl(215,52%,9%)] dark:border-[hsl(215,40%,16%)]">
 
       {/* Logo header */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-[hsl(215,40%,16%)] shrink-0">
+      <div className="flex items-center gap-3 px-5 h-16 border-b border-gray-200 dark:border-[hsl(215,40%,16%)] shrink-0">
         <div className="relative flex-shrink-0" style={{ animation: "float 3s ease-in-out infinite" }}>
           <div className="absolute inset-0 rounded-xl bg-blue-500/20 blur-lg" />
           <SignalLogo />
         </div>
         <div className="flex flex-col leading-tight">
-          <span className="text-[15px] font-bold text-white tracking-tight">Signal</span>
-          <span className="text-[10px] text-blue-300/50 font-medium tracking-widest uppercase">
+          <span className="text-[15px] font-bold tracking-tight text-gray-800 dark:text-white">Signal</span>
+          <span className="text-[10px] font-medium tracking-widest uppercase text-blue-500/60 dark:text-blue-300/50">
             content automation
           </span>
         </div>
@@ -70,8 +71,8 @@ export function Sidebar() {
               className={cn(
                 "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 active
-                  ? "bg-gradient-to-r from-blue-600/25 to-cyan-600/15 text-white"
-                  : "text-blue-200/45 hover:bg-white/[0.05] hover:text-blue-100"
+                  ? "bg-gradient-to-r from-blue-600/20 to-cyan-600/10 text-blue-700 dark:from-blue-600/25 dark:to-cyan-600/15 dark:text-white"
+                  : "text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-blue-200/45 dark:hover:bg-white/[0.05] dark:hover:text-blue-100"
               )}
             >
               {active && (
@@ -79,7 +80,9 @@ export function Sidebar() {
               )}
               <Icon className={cn(
                 "h-4 w-4 flex-shrink-0 transition-colors duration-200",
-                active ? "text-blue-400" : "text-blue-400/35 group-hover:text-blue-300/65"
+                active
+                  ? "text-blue-500 dark:text-blue-400"
+                  : "text-gray-400 group-hover:text-gray-600 dark:text-blue-400/35 dark:group-hover:text-blue-300/65"
               )} />
               {item.label}
               {active && (
@@ -92,26 +95,26 @@ export function Sidebar() {
       </nav>
 
       {/* Bottom controls */}
-      <div className="border-t border-[hsl(215,40%,16%)] p-3 space-y-0.5">
+      <div className="border-t border-gray-200 dark:border-[hsl(215,40%,16%)] p-3 space-y-0.5">
         <button
           onClick={toggle}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-blue-200/45 hover:bg-white/[0.05] hover:text-blue-100 transition-all duration-200"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-blue-200/45 dark:hover:bg-white/[0.05] dark:hover:text-blue-100 transition-all duration-200"
         >
           {theme === "dark"
-            ? <Sun  className="h-4 w-4 text-blue-400/35" />
-            : <Moon className="h-4 w-4 text-blue-400/35" />}
+            ? <Sun  className="h-4 w-4 text-gray-400 dark:text-blue-400/35" />
+            : <Moon className="h-4 w-4 text-gray-400 dark:text-blue-400/35" />}
           {theme === "dark" ? "Light mode" : "Dark mode"}
         </button>
         <a
           href="/api/auth/logout"
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-blue-200/45 hover:bg-white/[0.05] hover:text-blue-100 transition-all duration-200"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-200 hover:text-gray-800 dark:text-blue-200/45 dark:hover:bg-white/[0.05] dark:hover:text-blue-100 transition-all duration-200"
         >
-          <LogOut className="h-4 w-4 text-blue-400/35" />
+          <LogOut className="h-4 w-4 text-gray-400 dark:text-blue-400/35" />
           Sign out
         </a>
         <div className="px-3 pt-3 pb-1">
-          <div className="text-[10px] text-blue-300/25 uppercase tracking-widest mb-0.5">Logged in as</div>
-          <div className="text-[11px] text-blue-200/40 truncate">waelsalameh255@gmail.com</div>
+          <div className="text-[10px] uppercase tracking-widest mb-0.5 text-gray-400 dark:text-blue-300/25">Logged in as</div>
+          <div className="text-[11px] truncate text-gray-500 dark:text-blue-200/40">waelsalameh255@gmail.com</div>
         </div>
       </div>
     </aside>
