@@ -68,6 +68,14 @@ export const authors = pgTable("authors", {
   fathomUserEmail: varchar("fathom_user_email", { length: 256 }),
   fathomConnectedAt: timestamp("fathom_connected_at"),
   fathomLastSyncedAt: timestamp("fathom_last_synced_at"),
+  // LinkedIn OAuth integration
+  linkedinAccessToken: text("linkedin_access_token"),
+  linkedinRefreshToken: text("linkedin_refresh_token"),
+  linkedinTokenExpiresAt: timestamp("linkedin_token_expires_at"),
+  linkedinMemberId: varchar("linkedin_member_id", { length: 128 }),
+  linkedinMemberName: varchar("linkedin_member_name", { length: 256 }),
+  linkedinConnectedAt: timestamp("linkedin_connected_at"),
+  linkedinLastSyncedAt: timestamp("linkedin_last_synced_at"),
 });
 
 /** Reusable post structures (Hook→Story→Lesson, Before/After, etc.) */
@@ -98,6 +106,8 @@ export const posts = pgTable("posts", {
   reviewerNotes: text("reviewer_notes"),
   scheduledFor: timestamp("scheduled_for"),
   publishedAt: timestamp("published_at"),
+  /** LinkedIn activity/ugcPost URN, set when marking as published. Used to sync analytics. */
+  linkedinPostUrn: varchar("linkedin_post_urn", { length: 256 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -124,6 +134,7 @@ export const analytics = pgTable("analytics", {
   comments: integer("comments").default(0),
   shares: integer("shares").default(0),
   clicks: integer("clicks").default(0),
+  source: varchar("source", { length: 32 }).default("manual"), // "manual" | "linkedin"
   capturedAt: timestamp("captured_at").defaultNow().notNull(),
 });
 
@@ -152,11 +163,12 @@ export const authTokens = pgTable("auth_tokens", {
   tokenIdx: uniqueIndex("auth_tokens_token_idx").on(t.token),
 }));
 
-/** CSRF-protected OAuth state for Fathom connect flow. */
+/** CSRF-protected OAuth state for Fathom/LinkedIn connect flow. */
 export const oauthStates = pgTable("oauth_states", {
   id: serial("id").primaryKey(),
   state: varchar("state", { length: 64 }).notNull(),
   authorId: integer("author_id").references(() => authors.id, { onDelete: "cascade" }),
+  provider: varchar("provider", { length: 32 }).default("fathom"), // "fathom" | "linkedin"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
 }, (t) => ({

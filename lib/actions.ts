@@ -3,6 +3,7 @@
 import { db, schema } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { desc, eq, and, sql, lt } from "drizzle-orm";
+import { extractLinkedinPostUrn } from "@/lib/linkedin";
 import {
   generatePostsFromTranscript,
   generatePost,
@@ -360,16 +361,33 @@ export async function rejectPostAction(postId: number, notes: string) {
   revalidatePath(`/posts/${postId}`);
 }
 
-export async function markPublishedAction(postId: number) {
+export async function markPublishedAction(postId: number, linkedinUrl?: string) {
+  const urn = linkedinUrl ? extractLinkedinPostUrn(linkedinUrl) : null;
   await db
     .update(schema.posts)
-    .set({ status: "published", publishedAt: new Date(), updatedAt: new Date() })
+    .set({
+      status: "published",
+      publishedAt: new Date(),
+      updatedAt: new Date(),
+      ...(urn ? { linkedinPostUrn: urn } : {}),
+    })
     .where(eq(schema.posts.id, postId));
   const [p] = await db.select().from(schema.posts).where(eq(schema.posts.id, postId));
   if (p?.signalId) {
     await db.update(schema.signals).set({ status: "used" }).where(eq(schema.signals.id, p.signalId));
   }
   revalidatePath("/review");
+  revalidatePath(`/posts/${postId}`);
+  revalidatePath("/analytics");
+}
+
+export async function setLinkedinPostUrlAction(postId: number, linkedinUrl: string) {
+  const urn = extractLinkedinPostUrn(linkedinUrl);
+  if (!urn) throw new Error("Could not extract a LinkedIn post URN from that URL. Make sure it's a valid post link.");
+  await db
+    .update(schema.posts)
+    .set({ linkedinPostUrn: urn, updatedAt: new Date() })
+    .where(eq(schema.posts.id, postId));
   revalidatePath(`/posts/${postId}`);
   revalidatePath("/analytics");
 }

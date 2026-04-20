@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
-import { sql, eq, desc } from "drizzle-orm";
+import { sql, eq, desc, isNotNull } from "drizzle-orm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { timeAgo } from "@/lib/utils";
+import { LinkedInSyncButton } from "./sync-button";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,10 +41,12 @@ export default async function AnalyticsPage() {
     .catch(() => []);
 
   const authorMap = new Map<number, { name: string; role: string | null }>();
-  if (authorRows.length) {
-    const authors = await db.select().from(schema.authors);
-    authors.forEach((a) => authorMap.set(a.id, { name: a.name, role: a.role }));
-  }
+  const allAuthors = await db.select().from(schema.authors);
+  allAuthors.forEach((a) => authorMap.set(a.id, { name: a.name, role: a.role }));
+
+  const linkedinConnectedAuthorIds = allAuthors
+    .filter((a) => !!a.linkedinAccessToken)
+    .map((a) => a.id);
 
   const totals = rows.reduce(
     (acc, r) => ({
@@ -57,11 +60,14 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl p-6 md:p-10">
-      <header className="mb-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Post performance feeds back into generation — top-performing hooks get reused automatically.
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Analytics</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Post performance feeds back into generation — top-performing hooks get reused automatically.
+          </p>
+        </div>
+        <LinkedInSyncButton authorIds={linkedinConnectedAuthorIds} />
       </header>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

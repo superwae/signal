@@ -18,6 +18,7 @@ import {
   markPublishedAction,
   generateDesignBriefAction,
   recordAnalyticsAction,
+  setLinkedinPostUrlAction,
 } from "@/lib/actions";
 import { Loader2, Scissors, Gauge, RefreshCw, Send, Check, X, Image as ImageIcon, BarChart3 } from "lucide-react";
 
@@ -36,6 +37,8 @@ export function PostEditor({
   const [loading, setLoading] = useState<string | null>(null);
   const [brief, setBrief] = useState(initialBrief);
   const [isPending, startTransition] = useTransition();
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [linkedinUrlInput, setLinkedinUrlInput] = useState(post.linkedinPostUrn ? `(URN: ${post.linkedinPostUrn})` : "");
 
   useEffect(() => setText(post.content), [post.content]);
 
@@ -104,9 +107,22 @@ export function PostEditor({
   async function markPublished() {
     setLoading("publish");
     try {
-      await markPublishedAction(post.id);
+      await markPublishedAction(post.id, linkedinUrl || undefined);
       toast({ title: "Marked as published", kind: "success" });
       startTransition(() => router.refresh());
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function saveLinkedinUrl() {
+    setLoading("linkedin-url");
+    try {
+      await setLinkedinPostUrlAction(post.id, linkedinUrlInput);
+      toast({ title: "LinkedIn URL saved", kind: "success" });
+      startTransition(() => router.refresh());
+    } catch (e: any) {
+      toast({ title: "Invalid URL", description: e?.message, kind: "error" });
     } finally {
       setLoading(null);
     }
@@ -156,10 +172,18 @@ export function PostEditor({
             </>
           )}
           {post.status === "approved" && (
-            <Button onClick={markPublished} disabled={loading === "publish"}>
-              {loading === "publish" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Mark as published
-            </Button>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="LinkedIn post URL (optional)"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                className="w-64 text-xs"
+              />
+              <Button onClick={markPublished} disabled={loading === "publish"}>
+                {loading === "publish" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Mark as published
+              </Button>
+            </div>
           )}
         </div>
       </header>
@@ -269,6 +293,33 @@ export function PostEditor({
         </div>
 
         <aside className="space-y-4">
+          {post.status === "published" && (
+            <Card>
+              <CardHeader><CardTitle className="text-sm">LinkedIn post URL</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {post.linkedinPostUrn ? (
+                  <p className="text-xs text-muted-foreground break-all">URN: {post.linkedinPostUrn}</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No LinkedIn URL linked yet. Add one to enable analytics sync.</p>
+                )}
+                <Input
+                  placeholder="https://www.linkedin.com/posts/..."
+                  value={linkedinUrlInput}
+                  onChange={(e) => setLinkedinUrlInput(e.target.value)}
+                  className="text-xs"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={saveLinkedinUrl}
+                  disabled={loading === "linkedin-url" || !linkedinUrlInput.trim() || linkedinUrlInput.startsWith("(URN:")}
+                >
+                  {loading === "linkedin-url" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                  Save URL
+                </Button>
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardHeader><CardTitle className="text-sm">Scores</CardTitle></CardHeader>
             <CardContent className="space-y-3">

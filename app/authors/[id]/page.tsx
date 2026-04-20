@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
 import { FathomCard } from "./fathom-card";
+import { LinkedInCard } from "./linkedin-card";
 import { ContentAngles } from "./content-angles";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +41,18 @@ export default async function AuthorDetailPage({ params }: { params: { id: strin
             fathomConnectedAt={author.fathomConnectedAt}
             fathomLastSyncedAt={author.fathomLastSyncedAt}
             isConnected={!!author.fathomAccessToken}
+          />
+        </Suspense>
+      </div>
+
+      <div className="mb-4">
+        <Suspense>
+          <LinkedInCard
+            authorId={author.id}
+            linkedinMemberName={author.linkedinMemberName}
+            linkedinConnectedAt={author.linkedinConnectedAt}
+            linkedinLastSyncedAt={author.linkedinLastSyncedAt}
+            isConnected={!!author.linkedinAccessToken}
           />
         </Suspense>
       </div>
