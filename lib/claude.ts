@@ -74,42 +74,48 @@ export async function generatePostsFromTranscript(
 
   const raw = await textCall({
     maxTokens: 4000,
-    temperature: 0.7,
-    system: `You are an expert LinkedIn content strategist.${anglesHint}`,
-    user: `Convert the following meeting transcript into 1–3 HIGH-VALUE LinkedIn posts.
-
-Rules:
-- Extract only strong "signals" (metrics, mistakes, insights, contrarian opinions, real quotes)
-- Ignore generic or obvious content
-- Focus on what is specific, useful, or surprising
+    temperature: 0.8,
+    system: `You are a top-tier LinkedIn ghostwriter known for posts that go viral because they feel real, punchy, and genuinely useful.${anglesHint}`,
+    user: `Read this meeting transcript and turn it into 1–3 LinkedIn posts that people actually stop scrolling for.
 
 Each post MUST:
-- Be based on ONE clear idea
-- Include at least one concrete detail (number, mistake, or real example)
-- Deliver a clear takeaway
-- Use emojis sparingly and only when they add genuine energy (never decorative)
+- Be built on ONE sharp idea from the transcript (a metric, a mistake, a contrarian take, a real quote, a surprising insight)
+- Skip anything generic, obvious, or vague
+- Feel like it came from a real person — not a consultant
 
-Structure:
-1. Hook (scroll-stopping, 1–2 lines)
-2. Context (short)
-3. Insight / Story
-4. Proof (metric, example, or quote)
-5. Takeaway
+Structure every post like this:
+1. 🔥 Hook — 1 punchy line that makes someone stop (question, bold claim, or unexpected stat)
+2. Short setup — 1–2 lines of context
+3. The real insight — what happened, what was learned, what surprised you
+4. Proof — a number, a quote, a specific example
+5. Takeaway — one clear "so what" the reader can use
 
-Style:
-- Short lines (LinkedIn style)
-- Human, not robotic
-- No fluff, no summaries
-- Make it worth saving
+Formatting rules:
+- Use emojis at the START of key lines to create visual rhythm (e.g. 💡 for insight, 📉 for a problem, ✅ for a win, ⚠️ for a warning) — but only where they genuinely fit
+- Short lines — max 10 words each, LinkedIn style
+- Add one blank line between each section
+- End with 3–5 relevant hashtags on their own line
+- No bullet lists — flowing short paragraphs only
+- Make it feel worth saving and sharing
 
-Output format — use exactly this:
+${availableAuthorRoles.length ? `Output format — use exactly this:
 POST 1:
 [post text]
-${availableAuthorRoles.length ? "RECOMMENDED_FOR: [role]\n" : ""}
+RECOMMENDED_FOR: [role]
+
 POST 2:
 [post text]
-${availableAuthorRoles.length ? "RECOMMENDED_FOR: [role]\n" : ""}
-(Only include posts that are truly valuable.)${authorHint}
+RECOMMENDED_FOR: [role]
+
+(Only include posts that are genuinely valuable. Omit POST 2 or POST 3 if the transcript doesn't have enough strong material.)` : `Output format — use exactly this:
+POST 1:
+[post text]
+
+POST 2:
+[post text]
+
+(Only include posts that are genuinely valuable.)`}
+${authorHint}
 
 -------------------------------------
 TRANSCRIPT:
