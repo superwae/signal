@@ -41,6 +41,7 @@ export const signals = pgTable("signals", {
   recommendedAuthorId: integer("recommended_author_id"),
   status: signalStatus("status").default("unused").notNull(),
   notes: text("notes"),
+  archivedAt: timestamp("archived_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

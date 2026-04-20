@@ -2,7 +2,7 @@
 
 import { db, schema } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { desc, eq, and, sql } from "drizzle-orm";
+import { desc, eq, and, sql, lt } from "drizzle-orm";
 import {
   generatePostsFromTranscript,
   generatePost,
@@ -81,8 +81,20 @@ export async function applyFrameworkToSignalAction(content: string, frameworkId:
 }
 
 export async function archiveSignalAction(id: number) {
-  await db.update(schema.signals).set({ status: "archived" }).where(eq(schema.signals.id, id));
+  await db.update(schema.signals).set({ status: "archived", archivedAt: new Date() }).where(eq(schema.signals.id, id));
   revalidatePath("/signals");
+  revalidatePath("/signals/archive");
+}
+
+export async function deleteSignalPermanentlyAction(id: number) {
+  await db.delete(schema.signals).where(eq(schema.signals.id, id));
+  revalidatePath("/signals/archive");
+}
+
+export async function restoreSignalAction(id: number) {
+  await db.update(schema.signals).set({ status: "unused", archivedAt: null }).where(eq(schema.signals.id, id));
+  revalidatePath("/signals");
+  revalidatePath("/signals/archive");
 }
 
 /* ========== AUTHORS ========== */

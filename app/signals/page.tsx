@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
-import { desc, ne } from "drizzle-orm";
+import { desc, ne, eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
-import { Plus, User } from "lucide-react";
+import { Plus, User, Archive } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function SignalsPage() {
-  const [signals, authors] = await Promise.all([
+  const [signals, authors, archivedCount] = await Promise.all([
     db.select().from(schema.signals).where(ne(schema.signals.status, "archived")).orderBy(desc(schema.signals.createdAt)),
     db.select({ id: schema.authors.id, name: schema.authors.name }).from(schema.authors),
+    db.select({ id: schema.signals.id }).from(schema.signals).where(eq(schema.signals.status, "archived")).then((r) => r.length),
   ]);
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
 
@@ -25,12 +26,20 @@ export default async function SignalsPage() {
             LinkedIn posts generated from your meetings.
           </p>
         </div>
-        <Link href="/signals/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            New from transcript
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/signals/archive">
+            <Button variant="outline" size="sm">
+              <Archive className="h-4 w-4" />
+              Archive{archivedCount > 0 && <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium">{archivedCount}</span>}
+            </Button>
+          </Link>
+          <Link href="/signals/new">
+            <Button>
+              <Plus className="h-4 w-4" />
+              New from transcript
+            </Button>
+          </Link>
+        </div>
       </header>
 
       {signals.length === 0 ? (
