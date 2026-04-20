@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Radio, Users, BarChart3, Wrench, Sun, Moon, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,9 +48,8 @@ export function Sidebar() {
 
       {/* Logo header */}
       <div className="flex items-center gap-3 px-5 h-16 border-b border-gray-200 dark:border-[hsl(215,40%,16%)] shrink-0">
-        <div className="relative flex-shrink-0" style={{ animation: "float 3s ease-in-out infinite" }}>
-          <div className="absolute inset-0 rounded-xl bg-blue-500/20 blur-lg" />
-          <SignalLogo />
+        <div className="relative flex-shrink-0">
+          <Image src="/logo.png" alt="Signal logo" width={38} height={38} className="rounded-xl" />
         </div>
         <div className="flex flex-col leading-tight">
           <span className="text-[15px] font-bold tracking-tight text-gray-800 dark:text-white">Signal</span>
