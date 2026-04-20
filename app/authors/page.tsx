@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AuthorsPage() {
   const authors = await db.select().from(schema.authors).orderBy(desc(schema.authors.createdAt)).catch(() => []);

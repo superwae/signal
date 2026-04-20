@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ReviewPage({ searchParams }: { searchParams: { tab?: string } }) {
   const tab = searchParams?.tab ?? "in_review";

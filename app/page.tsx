@@ -8,6 +8,7 @@ import { timeAgo } from "@/lib/utils";
 import { ArrowUpRight, Radio, FileEdit, ClipboardList, Send, Users } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 async function loadStats() {
   try {

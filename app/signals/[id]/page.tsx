@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { SignalGenerateForm } from "./generate-form";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function SignalDetailPage({ params }: { params: { id: string } }) {
   const id = Number(params.id);

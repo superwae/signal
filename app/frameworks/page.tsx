@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { NewFrameworkForm } from "./new-form";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function FrameworksPage() {
   const frameworks = await db.select().from(schema.frameworks).orderBy(desc(schema.frameworks.createdAt)).catch(() => []);

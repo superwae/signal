@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { PostEditor } from "./editor";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function PostPage({ params }: { params: { id: string } }) {
   const id = Number(params.id);

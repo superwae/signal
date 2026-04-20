@@ -7,9 +7,10 @@ import { timeAgo } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function SignalsPage() {
-  const signals = await db.select().from(schema.signals).orderBy(desc(schema.signals.createdAt)).catch(() => []);
+  const signals = await db.select().from(schema.signals).orderBy(desc(schema.signals.createdAt));
   return (
     <div className="mx-auto w-full max-w-6xl p-6 md:p-10">
       <header className="mb-8 flex items-end justify-between">
