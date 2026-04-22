@@ -60,7 +60,7 @@ function LoginForm() {
         const j = await r.json().catch(() => ({}));
         throw new Error(j.error ?? "Login failed");
       }
-      router.push(search.get("next") || "/");
+      window.location.href = search.get("next") || "/";
     } catch (e: any) {
       setError(e?.message ?? "Login failed");
     } finally {
