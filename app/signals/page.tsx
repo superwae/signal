@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { db, schema } from "@/lib/db";
-import { desc, ne, eq, and, ilike, gte, lte, sql } from "drizzle-orm";
+import { desc, ne, eq, and, ilike, gte, lte, sql, inArray } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
@@ -21,10 +21,19 @@ export default async function SignalsPage({
 
   const session = await getCurrentUser();
   const conditions: any[] = [ne(schema.signals.status, "archived")];
-  // Non-admins only see signals assigned to their author
-  if (!session?.isAdmin && session?.authorId) {
+
+  if (session?.isSuperAdmin) {
+    // sees everything — no extra filter
+  } else if (session?.isAdmin && session.email) {
+    // Admin sees signals for authors of users they invited + their own author
+    const invitedUsers = await db.select({ authorId: schema.users.authorId }).from(schema.users).where(eq(schema.users.invitedBy, session.email)).catch(() => []);
+    const ownedIds = [...invitedUsers.map((u) => u.authorId).filter((id): id is number => id != null), ...(session.authorId ? [session.authorId] : [])];
+    if (ownedIds.length > 0) conditions.push(inArray(schema.signals.recommendedAuthorId, ownedIds));
+    else conditions.push(eq(schema.signals.id, -1)); // empty result
+  } else if (session?.authorId) {
     conditions.push(eq(schema.signals.recommendedAuthorId, session.authorId));
   }
+
   if (q) conditions.push(ilike(schema.signals.rawContent, `%${q}%`));
   if (author && session?.isAdmin) conditions.push(eq(schema.signals.recommendedAuthorId, Number(author)));
   if (from) conditions.push(gte(schema.signals.createdAt, new Date(from)));

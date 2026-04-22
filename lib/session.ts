@@ -2,11 +2,14 @@ import { cookies } from "next/headers";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 
+const SUPERADMIN_EMAIL = "moh.awwad243@gmail.com";
+
 export type SessionUser = {
   email: string;
-  role: "admin" | "user";
+  role: "superadmin" | "admin" | "user";
   authorId: number | null;
-  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  isAdmin: boolean; // true for superadmin and admin
 };
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -14,14 +17,8 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const email = cookieStore.get("signal_email")?.value?.toLowerCase().trim();
   if (!email) return null;
 
-  // Env-var admins always get full access
-  const envAdmins = (process.env.ALLOWED_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (envAdmins.includes(email)) {
-    return { email, role: "admin", authorId: null, isAdmin: true };
+  if (email === SUPERADMIN_EMAIL) {
+    return { email, role: "superadmin", authorId: null, isSuperAdmin: true, isAdmin: true };
   }
 
   const [user] = await db
@@ -38,6 +35,7 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     email: user.email,
     role,
     authorId: user.authorId ?? null,
+    isSuperAdmin: false,
     isAdmin: role === "admin",
   };
 }

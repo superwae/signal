@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Users, ArrowUpRight, Tag } from "lucide-react";
@@ -12,18 +12,42 @@ export const revalidate = 0;
 
 export default async function AuthorsPage() {
   const session = await getCurrentUser();
-  const isAdmin = session?.isAdmin ?? false;
+  const { isSuperAdmin, isAdmin, authorId, email } = session ?? {};
 
-  const [authors, users] = await Promise.all([
-    isAdmin
-      ? db.select().from(schema.authors).orderBy(desc(schema.authors.createdAt)).catch(() => [])
-      : session?.authorId
-        ? db.select().from(schema.authors).where(eq(schema.authors.id, session.authorId)).catch(() => [])
+  // Which authors to show
+  let authors: (typeof schema.authors.$inferSelect)[] = [];
+  // Which users to show in TeamManager
+  let users: (typeof schema.users.$inferSelect)[] = [];
+
+  if (isSuperAdmin) {
+    [authors, users] = await Promise.all([
+      db.select().from(schema.authors).orderBy(desc(schema.authors.createdAt)).catch(() => []),
+      db.select().from(schema.users).orderBy(desc(schema.users.createdAt)).catch(() => []),
+    ]);
+  } else if (isAdmin && email) {
+    // Admin sees: authors of users they invited + their own author
+    const invitedUsers = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.invitedBy, email))
+      .catch(() => []);
+
+    const ownedAuthorIds = [
+      ...invitedUsers.map((u) => u.authorId).filter((id): id is number => id != null),
+      ...(authorId ? [authorId] : []),
+    ];
+
+    [authors, users] = await Promise.all([
+      ownedAuthorIds.length > 0
+        ? db.select().from(schema.authors).where(inArray(schema.authors.id, ownedAuthorIds)).orderBy(desc(schema.authors.createdAt)).catch(() => [])
         : Promise.resolve([]),
-    isAdmin
-      ? db.select().from(schema.users).orderBy(desc(schema.users.createdAt)).catch(() => [])
-      : Promise.resolve([]),
-  ]);
+      invitedUsers,
+    ]);
+  } else if (authorId) {
+    // Regular user: only their own author
+    authors = await db.select().from(schema.authors).where(eq(schema.authors.id, authorId)).catch(() => []);
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl p-6 md:p-10">
       <header className="mb-8 flex items-end justify-between gap-4">
@@ -61,10 +85,14 @@ export default async function AuthorsPage() {
             <Users className="h-5 w-5 text-cyan-500" />
           </div>
           <p className="text-sm font-medium">No authors yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">Add one to start generating posts in their voice.</p>
-          <div className="mt-5">
-            <Link href="/authors/new"><Button size="sm">Add author</Button></Link>
-          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isAdmin ? "Add one to start generating posts in their voice." : "Your profile is being set up."}
+          </p>
+          {isAdmin && (
+            <div className="mt-5">
+              <Link href="/authors/new"><Button size="sm">Add author</Button></Link>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -107,7 +135,7 @@ export default async function AuthorsPage() {
 
       {isAdmin && (
         <div className="mt-10">
-          <TeamManager users={users} />
+          <TeamManager users={users} isSuperAdmin={isSuperAdmin ?? false} />
         </div>
       )}
     </div>

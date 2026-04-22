@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { UserPlus, Trash2 } from "lucide-react";
 import type { User } from "@/lib/db/schema";
 
-export function TeamManager({ users }: { users: User[] }) {
+export function TeamManager({ users, isSuperAdmin }: { users: User[]; isSuperAdmin: boolean }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [error, setError] = useState("");
@@ -50,7 +50,7 @@ export function TeamManager({ users }: { users: User[] }) {
           className="h-9 text-sm"
         />
         <div className="flex h-9 items-center rounded-md border border-input bg-background p-0.5 gap-0.5">
-          {(["user", "admin"] as const).map((r) => (
+          {(isSuperAdmin ? ["user", "admin"] as const : ["user"] as const).map((r) => (
             <button
               key={r}
               type="button"

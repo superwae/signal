@@ -386,12 +386,17 @@ export async function addUserAction(email: string, role: "admin" | "user") {
   const normalized = email.toLowerCase().trim();
   if (!normalized || !normalized.includes("@")) throw new Error("Invalid email.");
 
+  const { getCurrentUser } = await import("@/lib/session");
+  const session = await getCurrentUser();
+  if (!session?.isAdmin) throw new Error("Not authorised.");
+  // Only superadmin can create other admins
+  if (role === "admin" && !session.isSuperAdmin) throw new Error("Only the superadmin can create admin accounts.");
+
   await db
     .insert(schema.users)
-    .values({ email: normalized, role })
-    .onConflictDoUpdate({ target: schema.users.email, set: { role } });
+    .values({ email: normalized, role, invitedBy: session.email })
+    .onConflictDoUpdate({ target: schema.users.email, set: { role, invitedBy: session.email } });
 
-  // Generate invite token (7-day expiry)
   const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
   await db.insert(schema.authTokens).values({
     email: normalized,
