@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/utils";
+import { toast } from "@/components/ui/toaster";
 
 export function FathomCard({
   authorId,
@@ -23,15 +24,14 @@ export function FathomCard({
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     const fathom = searchParams.get("fathom");
     if (fathom === "connected") {
-      setToast("Fathom connected successfully!");
+      toast({ title: "Fathom connected successfully!", kind: "success" });
     } else if (fathom === "error") {
       const reason = searchParams.get("reason") ?? "unknown error";
-      setToast(`Fathom connection failed: ${reason}`);
+      toast({ title: "Fathom connection failed", description: reason, kind: "error" });
     }
   }, [searchParams]);
 
@@ -43,13 +43,13 @@ export function FathomCard({
       const res = await fetch(`/api/fathom/sync/${authorId}`, { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        setToast(`Synced ${data.synced ?? 0} signals from ${data.newMeetings ?? 0} new meetings`);
+        toast({ title: `Synced ${data.synced ?? 0} signals from ${data.newMeetings ?? 0} new meetings`, kind: "success" });
         router.refresh();
       } else {
-        setToast(data.error ?? "Sync failed");
+        toast({ title: "Sync failed", description: data.error, kind: "error" });
       }
     } catch {
-      setToast("Sync request failed");
+      toast({ title: "Sync request failed", kind: "error" });
     } finally {
       setSyncing(false);
     }
@@ -65,31 +65,19 @@ export function FathomCard({
       });
       router.refresh();
     } catch {
-      setToast("Disconnect failed");
+      toast({ title: "Disconnect failed", kind: "error" });
     } finally {
       setDisconnecting(false);
     }
   }
 
   return (
-    <>
-      {toast && (
-        <div className="mb-4 rounded-md border bg-muted px-4 py-3 text-sm">
-          {toast}
-          <button
-            onClick={() => setToast(null)}
-            className="ml-2 text-muted-foreground hover:text-foreground"
-          >
-            &times;
-          </button>
-        </div>
-      )}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Fathom integration</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {connected ? (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Fathom integration</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {connected ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
@@ -132,8 +120,7 @@ export function FathomCard({
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </>
+      </CardContent>
+    </Card>
   );
 }

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/utils";
+import { toast } from "@/components/ui/toaster";
 
 export function LinkedInCard({
   authorId,
@@ -23,15 +24,14 @@ export function LinkedInCard({
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     const li = searchParams.get("linkedin");
     if (li === "connected") {
-      setToast("LinkedIn connected successfully!");
+      toast({ title: "LinkedIn connected successfully!", kind: "success" });
     } else if (li === "error") {
       const reason = searchParams.get("reason") ?? "unknown error";
-      setToast(`LinkedIn connection failed: ${reason}`);
+      toast({ title: "LinkedIn connection failed", description: reason, kind: "error" });
     }
   }, [searchParams]);
 
@@ -41,13 +41,13 @@ export function LinkedInCard({
       const res = await fetch(`/api/linkedin/sync/${authorId}`, { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        setToast(`Synced ${data.synced ?? 0} of ${data.total ?? 0} posts from LinkedIn`);
+        toast({ title: `Synced ${data.synced ?? 0} of ${data.total ?? 0} posts from LinkedIn`, kind: "success" });
         router.refresh();
       } else {
-        setToast(data.error ?? "Sync failed");
+        toast({ title: "Sync failed", description: data.error, kind: "error" });
       }
     } catch {
-      setToast("Sync request failed");
+      toast({ title: "Sync request failed", kind: "error" });
     } finally {
       setSyncing(false);
     }
@@ -63,26 +63,14 @@ export function LinkedInCard({
       });
       router.refresh();
     } catch {
-      setToast("Disconnect failed");
+      toast({ title: "Disconnect failed", kind: "error" });
     } finally {
       setDisconnecting(false);
     }
   }
 
   return (
-    <>
-      {toast && (
-        <div className="mb-4 rounded-md border bg-muted px-4 py-3 text-sm">
-          {toast}
-          <button
-            onClick={() => setToast(null)}
-            className="ml-2 text-muted-foreground hover:text-foreground"
-          >
-            &times;
-          </button>
-        </div>
-      )}
-      <Card>
+    <Card>
         <CardHeader>
           <CardTitle className="text-base">LinkedIn integration</CardTitle>
         </CardHeader>
@@ -145,6 +133,5 @@ export function LinkedInCard({
           )}
         </CardContent>
       </Card>
-    </>
   );
 }

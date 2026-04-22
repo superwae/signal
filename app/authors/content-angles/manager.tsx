@@ -24,6 +24,7 @@ export function ContentAnglesManager({
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [linkingAngleId, setLinkingAngleId] = useState<number | null>(null);
   const [linkingAuthorId, setLinkingAuthorId] = useState<number | null>(null);
 
@@ -48,7 +49,6 @@ export function ContentAnglesManager({
   }
 
   async function remove(id: number, name: string) {
-    if (!confirm(`Delete angle "${name}"? It will be removed from all authors.`)) return;
     setDeletingId(id);
     try {
       await deleteContentAngleAction(id);
@@ -58,6 +58,7 @@ export function ContentAnglesManager({
       toast({ title: "Failed", description: e.message, kind: "error" });
     } finally {
       setDeletingId(null);
+      setConfirmDeleteId(null);
     }
   }
 
@@ -175,18 +176,36 @@ export function ContentAnglesManager({
                         )}
                       </div>
                     )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => remove(angle.id, angle.name)}
-                      disabled={deletingId === angle.id}
-                    >
-                      {deletingId === angle.id
-                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        : <Trash2 className="h-3.5 w-3.5" />
-                      }
-                    </Button>
+                    {confirmDeleteId === angle.id ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => remove(angle.id, angle.name)}
+                          disabled={deletingId === angle.id}
+                        >
+                          {deletingId === angle.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Delete"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => setConfirmDeleteId(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setConfirmDeleteId(angle.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { toast } from "@/components/ui/toaster";
 import { Loader2, UserPlus, ArrowRight, KeyRound } from "lucide-react";
 
 function InviteForm() {
@@ -39,7 +40,6 @@ function InviteForm() {
   async function submit() {
     if (!profile.name.trim()) return;
     setLoading(true);
-    setError("");
     try {
       const res = await fetch("/api/invite/complete", {
         method: "POST",
@@ -50,7 +50,7 @@ function InviteForm() {
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
       window.location.href = "/";
     } catch (e: any) {
-      setError(e.message);
+      toast({ title: "Setup failed", description: e.message, kind: "error" });
     } finally {
       setLoading(false);
     }
@@ -143,7 +143,6 @@ function InviteForm() {
                 </>
               )}
 
-              {error && <p className="text-sm text-red-500">{error}</p>}
               <div className="flex justify-between pt-1">
                 <Button variant="outline" onClick={() => { setStep(1); setError(""); }}>Back</Button>
                 <Button onClick={submit} disabled={loading || !profile.name.trim()}>

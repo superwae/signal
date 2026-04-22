@@ -16,6 +16,7 @@ export function FrameworkCard({ framework: f }: { framework: Framework }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState(f.name);
@@ -52,7 +53,6 @@ export function FrameworkCard({ framework: f }: { framework: Framework }) {
   }
 
   async function remove() {
-    if (!confirm(`Delete framework "${f.name}"? This cannot be undone.`)) return;
     setDeleting(true);
     try {
       await deleteFrameworkAction(f.id);
@@ -62,6 +62,7 @@ export function FrameworkCard({ framework: f }: { framework: Framework }) {
       toast({ title: "Failed to delete", description: e.message, kind: "error" });
     } finally {
       setDeleting(false);
+      setConfirmDelete(false);
     }
   }
 
@@ -105,13 +106,24 @@ export function FrameworkCard({ framework: f }: { framework: Framework }) {
     <div className="rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:border-purple-400/30 hover:shadow-glow-sm">
       <div className="mb-1 flex items-start justify-between gap-2">
         <span className="text-base font-semibold">{f.name}</span>
-        <div className="flex gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <Button size="sm" variant="ghost" onClick={() => setEditing(true)} className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
             <Edit2 className="h-3.5 w-3.5" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={remove} disabled={deleting} className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
-            {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-          </Button>
+          {confirmDelete ? (
+            <>
+              <Button size="sm" variant="destructive" onClick={remove} disabled={deleting} className="h-7 px-2 text-xs">
+                {deleting ? <Loader2 className="h-3 w-3 animate-spin" /> : "Delete"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)} className="h-7 px-2 text-xs">
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)} className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
         </div>
       </div>
       <p className="mb-3 text-sm text-muted-foreground">{f.description}</p>

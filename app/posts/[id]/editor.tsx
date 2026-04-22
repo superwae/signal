@@ -39,6 +39,8 @@ export function PostEditor({
   const [isPending, startTransition] = useTransition();
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [linkedinUrlInput, setLinkedinUrlInput] = useState(post.linkedinPostUrn ? `(URN: ${post.linkedinPostUrn})` : "");
+  const [rejectNotes, setRejectNotes] = useState("");
+  const [showRejectInput, setShowRejectInput] = useState(false);
 
   useEffect(() => setText(post.content), [post.content]);
 
@@ -92,12 +94,13 @@ export function PostEditor({
   }
 
   async function reject() {
-    const notes = window.prompt("Reason for rejection:");
-    if (!notes) return;
+    if (!rejectNotes.trim()) { setShowRejectInput(true); return; }
     setLoading("reject");
     try {
-      await rejectPostAction(post.id, notes);
+      await rejectPostAction(post.id, rejectNotes);
       toast({ title: "Rejected", kind: "info" });
+      setShowRejectInput(false);
+      setRejectNotes("");
       startTransition(() => router.refresh());
     } finally {
       setLoading(null);
@@ -165,10 +168,30 @@ export function PostEditor({
           )}
           {post.status === "in_review" && (
             <>
-              <Button variant="outline" onClick={reject} disabled={loading === "reject"}>
-                <X className="h-4 w-4" />
-                Reject
-              </Button>
+              {showRejectInput ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Reason for rejection"
+                    value={rejectNotes}
+                    onChange={(e) => setRejectNotes(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && reject()}
+                    className="w-56 text-xs"
+                    autoFocus
+                  />
+                  <Button variant="outline" onClick={reject} disabled={loading === "reject" || !rejectNotes.trim()}>
+                    {loading === "reject" ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                    Reject
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setShowRejectInput(false); setRejectNotes(""); }}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={reject} disabled={loading === "reject"}>
+                  <X className="h-4 w-4" />
+                  Reject
+                </Button>
+              )}
               <Button onClick={approve} disabled={loading === "approve"}>
                 {loading === "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 Approve

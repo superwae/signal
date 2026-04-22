@@ -6,6 +6,7 @@ import { addUserAction, removeUserAction } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "@/components/ui/toaster";
 import { UserPlus, Trash2, ArrowUpRight } from "lucide-react";
 import type { User } from "@/lib/db/schema";
 
@@ -14,17 +15,16 @@ type UserWithAuthor = User & { authorName?: string };
 export function TeamManager({ users, isSuperAdmin }: { users: UserWithAuthor[]; isSuperAdmin: boolean }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
-  const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function handleAdd() {
-    setError("");
     startTransition(async () => {
       try {
         await addUserAction(email.trim(), role);
         setEmail("");
+        toast({ title: "Invite sent", kind: "success" });
       } catch (e: any) {
-        setError(e.message ?? "Failed to add user.");
+        toast({ title: "Failed to add user", description: e.message, kind: "error" });
       }
     });
   }
@@ -71,8 +71,6 @@ export function TeamManager({ users, isSuperAdmin }: { users: UserWithAuthor[]; 
           Add
         </Button>
       </div>
-
-      {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
 
       {users.length === 0 ? (
         <p className="text-xs text-muted-foreground">No users added yet.</p>
