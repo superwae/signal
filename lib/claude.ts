@@ -86,7 +86,7 @@ The author's style (follow this precisely):
 - Flows in prose, not bullet points — 2–3 sentences per paragraph, natural rhythm
 - The insight lands quietly, not with a hammer — it's the thing that makes a reader pause and nod
 - Closes with a specific question directed at a named audience ("Fellow founders who made the leap…") — never generic engagement bait
-- Emojis: 0–2 max, only when genuinely needed, never as section markers or decoration
+- Emojis: 1–3 per post, placed at the start of a paragraph break or insight moment — never mid-sentence, never as decoration. The hook line never starts with an emoji.
 - Hashtags: 2–4, relevant, at the very end
 
 TRANSCRIPT LANGUAGE & QUALITY (critical — read before processing):
