@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +13,7 @@ import {
 import { toast } from "@/components/ui/toaster";
 import { User, Tag, FileText, BarChart2, ChevronDown, ChevronUp, Check, X, Plus, Star, Loader2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useScores } from "./scores-provider";
 
 type Author = { id: number; name: string; role: string | null };
 type ContentAngle = { id: number; name: string };
@@ -28,16 +28,17 @@ export function AuthorCard({
   author: Author | null;
   allAuthors: Author[];
 }) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [localAuthor, setLocalAuthor] = useState<Author | null>(author);
 
   async function selectAuthor(authorId: number | null) {
     setSaving(true);
     try {
       await updateSignalAuthorAction(signalId, authorId);
+      const next = authorId ? (allAuthors.find((a) => a.id === authorId) ?? null) : null;
+      setLocalAuthor(next);
       toast({ title: "Author updated", kind: "success" });
-      router.refresh();
     } catch {
       toast({ title: "Failed to update author", kind: "error" });
     } finally {
@@ -46,8 +47,8 @@ export function AuthorCard({
     }
   }
 
-  const initials = author
-    ? author.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+  const initials = localAuthor
+    ? localAuthor.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
     : "?";
 
   return (
@@ -66,8 +67,8 @@ export function AuthorCard({
                 {initials}
               </div>
               <div>
-                <div className="text-sm font-medium">{author?.name ?? "Unassigned"}</div>
-                {author?.role && <div className="text-[11px] text-muted-foreground">{author.role}</div>}
+                <div className="text-sm font-medium">{localAuthor?.name ?? "Unassigned"}</div>
+                {localAuthor?.role && <div className="text-[11px] text-muted-foreground">{localAuthor.role}</div>}
               </div>
             </div>
             <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="h-7 text-xs">
@@ -83,7 +84,7 @@ export function AuthorCard({
                 disabled={saving}
                 className={cn(
                   "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-left text-xs transition-colors",
-                  !author ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
+                  !localAuthor ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
                 )}
               >
                 <span className="font-medium text-muted-foreground">None</span>
@@ -96,14 +97,14 @@ export function AuthorCard({
                   disabled={saving}
                   className={cn(
                     "flex items-center gap-2 rounded-lg border px-3 py-1.5 text-left text-xs transition-colors",
-                    author?.id === a.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
+                    localAuthor?.id === a.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
                   )}
                 >
                   <div>
                     <div className="font-medium">{a.name}</div>
                     {a.role && <div className="text-muted-foreground">{a.role}</div>}
                   </div>
-                  {author?.id === a.id && <Check className="ml-auto h-3 w-3 text-primary" />}
+                  {localAuthor?.id === a.id && <Check className="ml-auto h-3 w-3 text-primary" />}
                 </button>
               ))}
             </div>
@@ -127,7 +128,6 @@ export function SignalAnglesCard({
   signalAngles: string[];
   allAngles: ContentAngle[];
 }) {
-  const router = useRouter();
   const [angles, setAngles] = useState<string[]>(signalAngles);
   const [newAngle, setNewAngle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -142,7 +142,6 @@ export function SignalAnglesCard({
     setSaving(true);
     try {
       await updateSignalContentAnglesAction(signalId, updated);
-      router.refresh();
     } catch {
       toast({ title: "Failed to update angles", kind: "error" });
     } finally {
@@ -279,25 +278,14 @@ export function TranscriptCard({ transcript }: { transcript: string }) {
 
 /* ─── Stats Panel ─── */
 export function SignalStatsPanel({
-  signalId,
-  hookStrength,
-  specificity,
-  clarity,
-  emotionalResonance,
-  callToAction,
   analytics,
   postCount,
 }: {
-  signalId: number;
-  hookStrength: number | null;
-  specificity: number | null;
-  clarity: number | null;
-  emotionalResonance: number | null;
-  callToAction: number | null;
   analytics: { impressions: number; likes: number; comments: number; shares: number };
   postCount: number;
 }) {
-  const router = useRouter();
+  const { signalId, scores, setScores } = useScores();
+  const { hookStrength, specificity, clarity, emotionalResonance, callToAction } = scores;
   const [scoring, setScoring] = useState(false);
   const hasScores = hookStrength !== null;
   const hasAnalytics = analytics.impressions > 0 || analytics.likes > 0 || analytics.comments > 0 || analytics.shares > 0;
@@ -306,8 +294,14 @@ export function SignalStatsPanel({
   async function score() {
     setScoring(true);
     try {
-      await scoreSignalAction(signalId);
-      router.refresh();
+      const s = await scoreSignalAction(signalId);
+      setScores({
+        hookStrength: s.hookStrength,
+        specificity: s.specificity,
+        clarity: s.clarity,
+        emotionalResonance: s.emotionalResonance,
+        callToAction: s.callToAction,
+      });
     } catch {
       toast({ title: "Scoring failed", kind: "error" });
     } finally {

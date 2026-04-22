@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/utils";
-import { ArrowUpRight, Radio, FileEdit, ClipboardList, Send, Users, Zap } from "lucide-react";
+import { ArrowUpRight, Radio, FileEdit, Send, Users, Zap } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -87,12 +87,11 @@ export default async function DashboardPage() {
       ) : (
         <>
           {/* Stats grid */}
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <Stat icon={<Radio     className="h-4 w-4" />} label="Unused signals" value={stats.unused}    href="/signals"          color="blue" />
-            <Stat icon={<FileEdit  className="h-4 w-4" />} label="Drafts"         value={stats.drafts}    href="/drafts" color="purple" />
-            <Stat icon={<ClipboardList className="h-4 w-4" />} label="In review"  value={stats.inReview}  href="/drafts"            color="amber" />
-            <Stat icon={<Send      className="h-4 w-4" />} label="Published"      value={stats.published} href="/analytics"         color="emerald" />
-            <Stat icon={<Users     className="h-4 w-4" />} label="Authors"        value={stats.authors}   href="/authors"           color="cyan" />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Stat icon={<Radio    className="h-4 w-4" />} label="Unused signals" value={stats.unused}    href="/signals"   color="blue" />
+            <Stat icon={<FileEdit className="h-4 w-4" />} label="In review"      value={stats.drafts}    href="/drafts"    color="purple" />
+            <Stat icon={<Send     className="h-4 w-4" />} label="Published"      value={stats.published} href="/analytics" color="emerald" />
+            <Stat icon={<Users    className="h-4 w-4" />} label="Authors"        value={stats.authors}   href="/authors"   color="cyan" />
           </div>
 
           {/* Recent posts */}

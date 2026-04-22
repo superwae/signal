@@ -9,6 +9,7 @@ import { ArrowLeft, Radio, ArrowUpRight } from "lucide-react";
 import { PostEditor } from "./post-editor";
 import { SignalGenerateForm } from "./generate-form";
 import { AuthorCard, SignalAnglesCard, TranscriptCard, SignalStatsPanel } from "./sidebar-cards";
+import { ScoresProvider } from "./scores-provider";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -161,6 +162,16 @@ export default async function SignalDetailPage({ params }: { params: { id: strin
       </div>
 
       {/* Two-column layout */}
+      <ScoresProvider
+        signalId={signal.id}
+        initial={{
+          hookStrength: signal.hookStrengthScore ?? null,
+          specificity: (signal as any).specificityScore ?? null,
+          clarity: (signal as any).clarityScore ?? null,
+          emotionalResonance: (signal as any).emotionalResonanceScore ?? null,
+          callToAction: (signal as any).callToActionScore ?? null,
+        }}
+      >
       <div className="grid gap-6 lg:grid-cols-[1fr_288px]">
         {/* ── MAIN ── */}
         <div className="space-y-5 min-w-0">
@@ -238,17 +249,12 @@ export default async function SignalDetailPage({ params }: { params: { id: strin
           )}
 
           <SignalStatsPanel
-            signalId={signal.id}
-            hookStrength={signal.hookStrengthScore ?? bestPost?.hookStrengthScore ?? null}
-            specificity={(signal as any).specificityScore ?? bestPost?.specificityScore ?? null}
-            clarity={(signal as any).clarityScore ?? (bestPost as any)?.clarityScore ?? null}
-            emotionalResonance={(signal as any).emotionalResonanceScore ?? (bestPost as any)?.emotionalResonanceScore ?? null}
-            callToAction={(signal as any).callToActionScore ?? (bestPost as any)?.callToActionScore ?? null}
             analytics={totalAnalytics}
             postCount={signalPosts.length}
           />
         </aside>
       </div>
+      </ScoresProvider>
     </div>
   );
 }

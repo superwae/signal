@@ -9,9 +9,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const TABS = [
-  { key: "drafts",   label: "Drafts",   statuses: ["draft", "in_review"] as const, icon: FileEdit,      color: "text-blue-500"   },
-  { key: "accepted", label: "Accepted", statuses: ["approved", "published"] as const, icon: CheckCircle2, color: "text-emerald-500" },
-  { key: "rejected", label: "Rejected", statuses: ["rejected"] as const,             icon: XCircle,      color: "text-red-500"    },
+  { key: "drafts",   label: "In review", statuses: ["draft", "in_review"] as const, icon: FileEdit,      color: "text-blue-500"   },
+  { key: "accepted", label: "Accepted",  statuses: ["approved", "published"] as const, icon: CheckCircle2, color: "text-emerald-500" },
+  { key: "rejected", label: "Rejected",  statuses: ["rejected"] as const,             icon: XCircle,      color: "text-red-500"    },
 ] as const;
 
 type TabKey = typeof TABS[number]["key"];
@@ -65,11 +65,11 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
       <header className="mb-8">
         <div className="flex items-center gap-2 mb-1">
           <FileEdit className="h-4 w-4 text-blue-500" />
-          <span className="text-xs font-semibold text-blue-500 uppercase tracking-widest">Drafts</span>
+          <span className="text-xs font-semibold text-blue-500 uppercase tracking-widest">In review</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Posts</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Manage your drafts, review approved posts, and track rejected ones.
+          Review in-progress posts, track approved ones, and manage rejections.
         </p>
       </header>
 
@@ -112,7 +112,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
           <p className="text-sm font-medium">No {tab.label.toLowerCase()} yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
             {tab.key === "drafts"
-              ? "Generate a post from a signal to see it here."
+              ? "Generate a post from a signal to see it here in review."
               : tab.key === "accepted"
               ? "Approved posts will appear here."
               : "Rejected posts will appear here."}

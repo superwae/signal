@@ -4,11 +4,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { updateSignalContentAction, archiveSignalAction, applyFrameworkToSignalAction, updateSignalBestFrameworkAction } from "@/lib/actions";
+import { updateSignalContentAction, archiveSignalAction, applyFrameworkToSignalAction, updateSignalBestFrameworkAction, scoreSignalAction } from "@/lib/actions";
 import { toast } from "@/components/ui/toaster";
 import { Edit2, Check, X, Copy, Trash2, Sparkles, Loader2, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useScores } from "./scores-provider";
 
 type Framework = { id: number; name: string; description: string };
 
@@ -26,6 +27,7 @@ export function PostEditor({
   bestFrameworkId?: number | null;
 }) {
   const router = useRouter();
+  const { setScores } = useScores();
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(initialContent);
   const [draft, setDraft] = useState(initialContent);
@@ -42,6 +44,16 @@ export function PostEditor({
       setContent(draft);
       setEditing(false);
       toast({ title: "Saved ✓", kind: "success" });
+      // Re-score in background after content changes
+      scoreSignalAction(signalId).then((s) => {
+        setScores({
+          hookStrength: s.hookStrength,
+          specificity: s.specificity,
+          clarity: s.clarity,
+          emotionalResonance: s.emotionalResonance,
+          callToAction: s.callToAction,
+        });
+      }).catch(() => {});
     } catch (e: any) {
       toast({ title: "Failed to save", description: e.message, kind: "error" });
     } finally {
