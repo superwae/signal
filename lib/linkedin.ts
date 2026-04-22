@@ -85,42 +85,38 @@ function extractVanityFromUrl(url: string): string | null {
   return m ? m[1] : null;
 }
 
+/** Last-resort: search DuckDuckGo via Jina Reader to find the LinkedIn vanity name from a member name. */
+async function resolveVanityViaSearch(memberName: string): Promise<string | null> {
+  const query = encodeURIComponent(`site:linkedin.com/in "${memberName}"`);
+  const jinaUrl = `https://r.jina.ai/https://duckduckgo.com/html/?q=${query}`;
+  try {
+    const res = await fetch(jinaUrl, {
+      headers: { Accept: "text/plain" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const m = text.match(/linkedin\.com\/in\/([a-zA-Z0-9_%-]+)/);
+    if (!m) return null;
+    return decodeURIComponent(m[1]);
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Resolve the LinkedIn profile vanity name using all available signals.
- * Tries multiple endpoints and fields so it works across different scope levels.
+ * Resolve the LinkedIn profile vanity name.
+ * With only OIDC scopes (openid profile email), the LinkedIn API does not return the vanity name,
+ * so we fall back to a DuckDuckGo search via Jina Reader using the member's display name.
  */
-export async function fetchLinkedinVanityName(accessToken: string, memberId?: string | null): Promise<string | null> {
-  const headers = { Authorization: `Bearer ${accessToken}` };
-
-  // 1. /v2/me with projection
-  const r1 = await fetch(`${LINKEDIN_API_BASE}/v2/me?projection=(id,vanityName,publicProfileUrl)`, { headers }).catch(() => null);
-  if (r1?.ok) {
-    const d = await r1.json();
-    if (d.vanityName) return d.vanityName;
-    if (d.publicProfileUrl) { const v = extractVanityFromUrl(d.publicProfileUrl); if (v) return v; }
+export async function fetchLinkedinVanityName(
+  _accessToken: string,
+  _memberId?: string | null,
+  memberName?: string | null
+): Promise<string | null> {
+  if (memberName) {
+    return resolveVanityViaSearch(memberName);
   }
-
-  // 2. /v2/me without projection (returns all accessible fields)
-  const r2 = await fetch(`${LINKEDIN_API_BASE}/v2/me`, { headers }).catch(() => null);
-  if (r2?.ok) {
-    const d = await r2.json();
-    if (d.vanityName) return d.vanityName;
-    if (d.publicProfileUrl) { const v = extractVanityFromUrl(d.publicProfileUrl); if (v) return v; }
-  }
-
-  // 3. /v2/people/(id:{memberId}) — uses the stored member ID
-  if (memberId) {
-    const r3 = await fetch(
-      `${LINKEDIN_API_BASE}/v2/people/(id:${encodeURIComponent(memberId)})?projection=(id,vanityName,publicProfileUrl)`,
-      { headers }
-    ).catch(() => null);
-    if (r3?.ok) {
-      const d = await r3.json();
-      if (d.vanityName) return d.vanityName;
-      if (d.publicProfileUrl) { const v = extractVanityFromUrl(d.publicProfileUrl); if (v) return v; }
-    }
-  }
-
   return null;
 }
 

@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     console.error("[linkedin-callback] fetchLinkedinProfile failed:", e);
     return { id: "", name: "" };
   });
-  const vanityName = await fetchLinkedinVanityName(tokens.access_token, profile.id).catch(() => null);
+  const vanityName = await fetchLinkedinVanityName(tokens.access_token, profile.id, profile.name).catch(() => null);
 
   const linkedinUrl = vanityName ? `https://www.linkedin.com/in/${vanityName}` : undefined;
 

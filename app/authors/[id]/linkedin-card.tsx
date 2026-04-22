@@ -32,7 +32,19 @@ export function LinkedInCard({
   useEffect(() => {
     const li = searchParams.get("linkedin");
     if (li === "connected") {
-      toast({ title: "LinkedIn connected successfully!", kind: "success" });
+      toast({ title: "LinkedIn connected — reading your profile…", kind: "success" });
+      setScraping(true);
+      scrapeLinkedinProfileAction(authorId)
+        .then((result) => {
+          if (result.ok) {
+            toast({ title: result.message, kind: "success" });
+            router.refresh();
+          } else {
+            toast({ title: "Could not read LinkedIn profile", description: result.message, kind: "error" });
+          }
+        })
+        .catch(() => toast({ title: "Could not read LinkedIn profile", kind: "error" }))
+        .finally(() => setScraping(false));
     } else if (li === "error") {
       const reason = searchParams.get("reason") ?? "unknown error";
       toast({ title: "LinkedIn connection failed", description: reason, kind: "error" });
@@ -99,11 +111,6 @@ export function LinkedInCard({
       <Button size="sm" variant="secondary" onClick={handleScrape} disabled={scraping}>
         {scraping ? "Reading LinkedIn…" : "Auto-fill from LinkedIn"}
       </Button>
-      {!linkedinUrl && (
-        <p className="text-xs text-amber-500">
-          No LinkedIn URL detected yet — add it in the profile header above, then click Auto-fill.
-        </p>
-      )}
     </div>
   );
 
