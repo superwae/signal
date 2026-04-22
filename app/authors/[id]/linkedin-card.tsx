@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { timeAgo } from "@/lib/utils";
 import { toast } from "@/components/ui/toaster";
-import { scrapeLinkedinProfileAction, analyzeLinkedinPostsFromTextAction } from "@/lib/actions";
+import { scrapeLinkedinProfileAction } from "@/lib/actions";
 
 export function LinkedInCard({
   authorId,
@@ -29,9 +28,6 @@ export function LinkedInCard({
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [scraping, setScraping] = useState(false);
-  const [pasteOpen, setPasteOpen] = useState(false);
-  const [pastedText, setPastedText] = useState("");
-  const [analyzingPaste, setAnalyzingPaste] = useState(false);
 
   useEffect(() => {
     const li = searchParams.get("linkedin");
@@ -68,31 +64,9 @@ export function LinkedInCard({
       toast({ title: message, kind: "success" });
       router.refresh();
     } catch (e: any) {
-      const msg: string = e.message ?? "";
-      if (msg.includes("login") || msg.includes("accessed")) {
-        toast({ title: "Profile is private", description: "LinkedIn requires login to view this profile. Paste posts manually below.", kind: "error" });
-        setPasteOpen(true);
-      } else {
-        toast({ title: "Could not read LinkedIn profile", description: msg, kind: "error" });
-      }
+      toast({ title: "Could not read LinkedIn profile", description: e.message, kind: "error" });
     } finally {
       setScraping(false);
-    }
-  }
-
-  async function handleAnalyzePaste() {
-    if (!pastedText.trim()) return;
-    setAnalyzingPaste(true);
-    try {
-      const message = await analyzeLinkedinPostsFromTextAction(authorId, pastedText);
-      toast({ title: message, kind: "success" });
-      setPasteOpen(false);
-      setPastedText("");
-      router.refresh();
-    } catch (e: any) {
-      toast({ title: "Analysis failed", description: e.message, kind: "error" });
-    } finally {
-      setAnalyzingPaste(false);
     }
   }
 
@@ -113,48 +87,17 @@ export function LinkedInCard({
   }
 
   const analyzeSection = (
-    <div className="space-y-3 border-t border-border/50 pt-3 mt-1">
-      <div className="space-y-1">
-        <p className="text-xs font-medium">Auto-fill profile from LinkedIn</p>
-        <p className="text-xs text-muted-foreground">
-          Reads the LinkedIn profile to fill in content angles, preferred frameworks, and voice profile.
-        </p>
-      </div>
+    <div className="space-y-2 border-t border-border/50 pt-3 mt-1">
+      <p className="text-xs font-medium">Auto-fill profile from LinkedIn</p>
+      <p className="text-xs text-muted-foreground">
+        Reads the LinkedIn profile to fill in content angles, preferred frameworks, and voice profile.
+      </p>
       {linkedinUrl ? (
         <Button size="sm" variant="secondary" onClick={handleScrape} disabled={scraping}>
           {scraping ? "Reading LinkedIn…" : "Auto-fill from LinkedIn"}
         </Button>
       ) : (
         <p className="text-xs text-amber-500">Add a LinkedIn URL in the profile header to enable this.</p>
-      )}
-      {pasteOpen ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">
-            Paste posts below (separate multiple posts with a blank line or <code>---</code>):
-          </p>
-          <Textarea
-            value={pastedText}
-            onChange={(e) => setPastedText(e.target.value)}
-            placeholder={"Paste your LinkedIn posts here...\n\n---\n\nPaste another post here..."}
-            rows={8}
-            className="text-sm"
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleAnalyzePaste} disabled={analyzingPaste || !pastedText.trim()}>
-              {analyzingPaste ? "Analyzing…" : "Analyze posts"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => { setPasteOpen(false); setPastedText(""); }}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <button
-          onClick={() => setPasteOpen(true)}
-          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors block"
-        >
-          Or paste posts manually
-        </button>
       )}
     </div>
   );
@@ -175,9 +118,7 @@ export function LinkedInCard({
               )}
             </div>
             {linkedinLastSyncedAt && (
-              <p className="text-xs text-muted-foreground">
-                Last sync: {timeAgo(linkedinLastSyncedAt)}
-              </p>
+              <p className="text-xs text-muted-foreground">Last sync: {timeAgo(linkedinLastSyncedAt)}</p>
             )}
             <div className="flex gap-2">
               <Button size="sm" onClick={handleSync} disabled={syncing}>
@@ -200,10 +141,7 @@ export function LinkedInCard({
                 Setup guide
               </a>
             </p>
-            <Button
-              size="sm"
-              onClick={() => { window.location.href = `/api/linkedin/oauth/initiate?authorId=${authorId}`; }}
-            >
+            <Button size="sm" onClick={() => { window.location.href = `/api/linkedin/oauth/initiate?authorId=${authorId}`; }}>
               Connect LinkedIn
             </Button>
             {analyzeSection}

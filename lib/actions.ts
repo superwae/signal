@@ -12,7 +12,7 @@ import {
   learnVoiceFromEdits,
   generateDesignBrief,
   reformatPostWithFramework,
-  analyzeLinkedinPosts,
+
   analyzeLinkedinPageContent,
 } from "@/lib/claude";
 
@@ -783,17 +783,3 @@ export async function scrapeLinkedinProfileAction(authorId: number): Promise<str
   return applyAnalysis(authorId, analysis);
 }
 
-export async function analyzeLinkedinPostsFromTextAction(authorId: number, rawText: string): Promise<string> {
-  if (!rawText || rawText.trim().length < 100) {
-    throw new Error("Please paste at least a few posts (100+ characters).");
-  }
-  const posts = rawText
-    .split(/\n{3,}|(?:\n|^)-{3,}(?:\n|$)/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 60);
-
-  const chunks = posts.length > 0 ? posts : [rawText.trim()];
-  const allFrameworks = await db.select({ name: schema.frameworks.name, description: schema.frameworks.description }).from(schema.frameworks);
-  const analysis = await analyzeLinkedinPosts(chunks, allFrameworks);
-  return applyAnalysis(authorId, analysis);
-}
