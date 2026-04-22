@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { addUserAction, removeUserAction } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Trash2 } from "lucide-react";
+import { UserPlus, Trash2, ArrowUpRight } from "lucide-react";
 import type { User } from "@/lib/db/schema";
 
-export function TeamManager({ users, isSuperAdmin }: { users: User[]; isSuperAdmin: boolean }) {
+type UserWithAuthor = User & { authorName?: string };
+
+export function TeamManager({ users, isSuperAdmin }: { users: UserWithAuthor[]; isSuperAdmin: boolean }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "user">("user");
   const [error, setError] = useState("");
@@ -56,9 +59,7 @@ export function TeamManager({ users, isSuperAdmin }: { users: User[]; isSuperAdm
               type="button"
               onClick={() => setRole(r)}
               className={`h-full px-3 rounded text-xs font-medium capitalize transition-colors ${
-                role === r
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground"
+                role === r ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {r}
@@ -73,29 +74,49 @@ export function TeamManager({ users, isSuperAdmin }: { users: User[]; isSuperAdm
 
       {error && <p className="mb-3 text-xs text-red-500">{error}</p>}
 
-      {/* User list */}
       {users.length === 0 ? (
         <p className="text-xs text-muted-foreground">No users added yet.</p>
       ) : (
         <ul className="space-y-2">
-          {users.map((u) => (
-            <li key={u.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-              <span className="truncate text-sm">{u.email}</span>
-              <div className="flex items-center gap-2 shrink-0">
-                {!u.active && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40">Pending</Badge>}
-                <Badge variant={u.role === "admin" ? "default" : "secondary"} className="text-[10px]">
-                  {u.role}
-                </Badge>
-                <button
-                  onClick={() => handleRemove(u.id)}
-                  disabled={isPending}
-                  className="text-muted-foreground/50 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+          {users.map((u) => {
+            const isAdmin = u.role === "admin";
+            const label = u.authorName || u.email;
+            const row = (
+              <div className="flex items-center justify-between gap-3 w-full">
+                <div className="min-w-0">
+                  <p className="text-sm truncate font-medium">{label}</p>
+                  {u.authorName && <p className="text-[11px] text-muted-foreground truncate">{u.email}</p>}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {!u.active && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40">Pending</Badge>}
+                  <Badge variant={isAdmin ? "default" : "secondary"} className="text-[10px]">{u.role}</Badge>
+                  {isAdmin && u.authorId && <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                  <button
+                    onClick={(e) => { e.preventDefault(); handleRemove(u.id); }}
+                    disabled={isPending}
+                    className="text-muted-foreground/50 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
-            </li>
-          ))}
+            );
+
+            return isAdmin && u.authorId ? (
+              <li key={u.id}>
+                <Link
+                  href={`/authors/${u.authorId}`}
+                  className="flex rounded-lg border border-border px-3 py-2.5 hover:border-cyan-400/30 hover:bg-muted/40 transition-colors"
+                >
+                  {row}
+                </Link>
+              </li>
+            ) : (
+              <li key={u.id} className="flex rounded-lg border border-border px-3 py-2">
+                {row}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

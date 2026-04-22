@@ -7,6 +7,8 @@ import { Plus, Users, ArrowUpRight, Tag } from "lucide-react";
 import { TeamManager } from "@/components/team-manager";
 import { getCurrentUser } from "@/lib/session";
 
+type UserWithAuthor = typeof schema.users.$inferSelect & { authorName?: string };
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -16,14 +18,18 @@ export default async function AuthorsPage() {
 
   // Which authors to show
   let authors: (typeof schema.authors.$inferSelect)[] = [];
-  // Which users to show in TeamManager
-  let users: (typeof schema.users.$inferSelect)[] = [];
+  let users: UserWithAuthor[] = [];
 
   if (isSuperAdmin) {
-    [authors, users] = await Promise.all([
-      db.select().from(schema.authors).orderBy(desc(schema.authors.createdAt)).catch(() => []),
-      db.select().from(schema.users).orderBy(desc(schema.users.createdAt)).catch(() => []),
-    ]);
+    const rawUsers = await db.select().from(schema.users).orderBy(desc(schema.users.createdAt)).catch(() => []);
+    const authorIds = rawUsers.map((u) => u.authorId).filter((id): id is number => id != null);
+    const authorNames = authorIds.length
+      ? await db.select({ id: schema.authors.id, name: schema.authors.name }).from(schema.authors).where(inArray(schema.authors.id, authorIds)).catch(() => [])
+      : [];
+    const nameMap = Object.fromEntries(authorNames.map((a) => [a.id, a.name]));
+    users = rawUsers.map((u) => ({ ...u, authorName: u.authorId ? nameMap[u.authorId] : undefined }));
+    // Superadmin sees no cards — only TeamManager
+    authors = [];
   } else if (isAdmin && email) {
     // Admin sees: authors of users they invited + their own author
     const invitedUsers = await db
@@ -79,62 +85,64 @@ export default async function AuthorsPage() {
         )}
       </header>
 
-      {authors.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-12 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10">
-            <Users className="h-5 w-5 text-cyan-500" />
-          </div>
-          <p className="text-sm font-medium">No authors yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {isAdmin ? "Add one to start generating posts in their voice." : "Your profile is being set up."}
-          </p>
-          {isAdmin && (
-            <div className="mt-5">
-              <Link href="/authors/new"><Button size="sm">Add author</Button></Link>
+      {!isSuperAdmin && (
+        authors.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-12 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10">
+              <Users className="h-5 w-5 text-cyan-500" />
             </div>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {authors.map((a) => {
-            const angles = (a.contentAngles as string[] | null) ?? [];
-            return (
-              <Link
-                key={a.id}
-                href={`/authors/${a.id}`}
-                className="group flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:border-cyan-400/30 hover:shadow-glow-sm hover:-translate-y-0.5"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-semibold">{a.name}</span>
-                    {!a.active && <Badge variant="secondary">Inactive</Badge>}
-                  </div>
-                  {a.role && <p className="text-xs text-muted-foreground mb-2">{a.role}</p>}
-                  {angles.length > 0 && (
-                    <div className="mb-2 flex flex-wrap gap-1">
-                      {angles.slice(0, 3).map((angle) => (
-                        <span key={angle} className="rounded-full bg-purple-500/8 px-2 py-0.5 text-[10px] font-medium text-purple-600 dark:text-purple-400">
-                          {angle}
-                        </span>
-                      ))}
-                      {angles.length > 3 && (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">+{angles.length - 3}</span>
-                      )}
+            <p className="text-sm font-medium">No authors yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isAdmin ? "Add one to start generating posts in their voice." : "Your profile is being set up."}
+            </p>
+            {isAdmin && (
+              <div className="mt-5">
+                <Link href="/authors/new"><Button size="sm">Add author</Button></Link>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {authors.map((a) => {
+              const angles = (a.contentAngles as string[] | null) ?? [];
+              return (
+                <Link
+                  key={a.id}
+                  href={`/authors/${a.id}`}
+                  className="group flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:border-cyan-400/30 hover:shadow-glow-sm hover:-translate-y-0.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold">{a.name}</span>
+                      {!a.active && <Badge variant="secondary">Inactive</Badge>}
                     </div>
-                  )}
-                  <p className="line-clamp-2 text-xs text-muted-foreground">
-                    {a.voiceProfile ? a.voiceProfile.slice(0, 220) : (a.bio ?? "No voice profile yet — it'll build up from edits.")}
-                  </p>
-                </div>
-                <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:text-cyan-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Link>
-            );
-          })}
-        </div>
+                    {a.role && <p className="text-xs text-muted-foreground mb-2">{a.role}</p>}
+                    {angles.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {angles.slice(0, 3).map((angle) => (
+                          <span key={angle} className="rounded-full bg-purple-500/8 px-2 py-0.5 text-[10px] font-medium text-purple-600 dark:text-purple-400">
+                            {angle}
+                          </span>
+                        ))}
+                        {angles.length > 3 && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">+{angles.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                      {a.voiceProfile ? a.voiceProfile.slice(0, 220) : (a.bio ?? "No voice profile yet — it'll build up from edits.")}
+                    </p>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:text-cyan-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              );
+            })}
+          </div>
+        )
       )}
 
       {isAdmin && (
-        <div className="mt-10">
+        <div className={isSuperAdmin ? "" : "mt-10"}>
           <TeamManager users={users} isSuperAdmin={isSuperAdmin ?? false} />
         </div>
       )}

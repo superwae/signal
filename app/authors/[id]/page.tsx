@@ -21,6 +21,14 @@ export default async function AuthorDetailPage({ params }: { params: { id: strin
   const id = Number(params.id);
   const [author] = await db.select().from(schema.authors).where(eq(schema.authors.id, id));
   if (!author) notFound();
+
+  // Check if this author is an admin — if so, load their invited users
+  const [linkedUser] = await db.select().from(schema.users).where(eq(schema.users.authorId, id)).limit(1).catch(() => []);
+  const isAdminAuthor = linkedUser?.role === "admin";
+  const invitedUsers = isAdminAuthor
+    ? await db.select().from(schema.users).where(eq(schema.users.invitedBy, linkedUser.email)).catch(() => [])
+    : [];
+
   const [posts, recentEdits, allGlobalAngles] = await Promise.all([
     db.select().from(schema.posts).where(eq(schema.posts.authorId, id)).orderBy(desc(schema.posts.updatedAt)),
     db.select().from(schema.edits).where(eq(schema.edits.authorId, id)).orderBy(desc(schema.edits.createdAt)).limit(5),
@@ -140,6 +148,30 @@ export default async function AuthorDetailPage({ params }: { params: { id: strin
           </Link>
         ))}
       </div>
+
+      {isAdminAuthor && (
+        <div className="mb-10">
+          <div className="mb-4">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Users ({invitedUsers.length})</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">People this admin has invited to the workspace.</p>
+          </div>
+          {invitedUsers.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No users invited yet.</div>
+          ) : (
+            <ul className="space-y-2">
+              {invitedUsers.map((u) => (
+                <li key={u.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+                  <span className="text-sm truncate">{u.email}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!u.active && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40">Pending</Badge>}
+                    <Badge variant="secondary" className="text-[10px]">{u.role}</Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Recent edits</h2>
