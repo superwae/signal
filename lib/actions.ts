@@ -49,6 +49,25 @@ export async function extractSignalsAction(
     };
   });
   const inserted = await db.insert(schema.signals).values(rows).returning();
+
+  // Auto-score and auto-star best framework for each signal in parallel
+  const frameworks = await db.select().from(schema.frameworks);
+  await Promise.all(
+    inserted.map(async (signal) => {
+      const bestFw =
+        frameworks.find((f) => (f.bestFor as string[] | null ?? []).includes(signal.contentType)) ??
+        frameworks[0] ??
+        null;
+      const scores = await scorePost(signal.rawContent).catch(() => null);
+      const patch: Record<string, unknown> = {};
+      if (bestFw) patch.bestFrameworkId = bestFw.id;
+      if (scores) { patch.hookStrengthScore = scores.hookStrength; patch.specificityScore = scores.specificity; }
+      if (Object.keys(patch).length) {
+        await db.update(schema.signals).set(patch as any).where(eq(schema.signals.id, signal.id));
+      }
+    })
+  );
+
   revalidatePath("/signals");
   revalidatePath("/");
   return { inserted: inserted.length, signals: inserted };
@@ -107,8 +126,25 @@ export async function createSignalAction(input: {
       notes: input.notes ?? null,
     })
     .returning();
+
+  // Auto-score and auto-star best framework
+  const [frameworks, scores] = await Promise.all([
+    db.select().from(schema.frameworks),
+    scorePost(row.rawContent).catch(() => null),
+  ]);
+  const bestFw =
+    frameworks.find((f) => (f.bestFor as string[] | null ?? []).includes(row.contentType)) ??
+    frameworks[0] ??
+    null;
+  const patch: Record<string, unknown> = {};
+  if (bestFw) patch.bestFrameworkId = bestFw.id;
+  if (scores) { patch.hookStrengthScore = scores.hookStrength; patch.specificityScore = scores.specificity; }
+  if (Object.keys(patch).length) {
+    await db.update(schema.signals).set(patch as any).where(eq(schema.signals.id, row.id));
+  }
+
   revalidatePath("/signals");
-  return row;
+  return { ...row, ...patch };
 }
 
 export async function updateSignalAuthorAction(id: number, authorId: number | null) {

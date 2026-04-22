@@ -302,8 +302,8 @@ export function SignalStatsPanel({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!hasScores && postCount === 0 && (
-          <p className="text-xs text-muted-foreground">Generate a post to see quality scores.</p>
+        {!hasScores && (
+          <p className="text-xs text-muted-foreground italic">Scoring runs automatically on extraction. For older signals, generate a post to see scores.</p>
         )}
 
         {hasScores && (

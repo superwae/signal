@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
-import { eq, desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Tag } from "lucide-react";
 import { ContentAnglesManager } from "./manager";
 
@@ -10,21 +9,45 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function ContentAnglesPage() {
-  const [allAngles, allAuthors] = await Promise.all([
+  const allAuthors = await db
+    .select({ id: schema.authors.id, name: schema.authors.name, contentAngles: schema.authors.contentAngles })
+    .from(schema.authors)
+    .where(eq(schema.authors.active, true));
+
+  // Silently migrate any angle names from authors' jsonb that aren't yet in the global table
+  const allJsonbAngles = allAuthors.flatMap((a) => (a.contentAngles as string[] | null) ?? []);
+  const uniqueJsonbNames = [...new Set(allJsonbAngles.map((n) => n.trim()).filter(Boolean))];
+
+  if (uniqueJsonbNames.length > 0) {
+    for (const name of uniqueJsonbNames) {
+      const existing = await db.select({ id: schema.contentAngles.id }).from(schema.contentAngles).where(eq(schema.contentAngles.name, name)).limit(1);
+      let angleId: number;
+      if (existing[0]) {
+        angleId = existing[0].id;
+      } else {
+        const [created] = await db.insert(schema.contentAngles).values({ name }).returning({ id: schema.contentAngles.id });
+        angleId = created.id;
+      }
+      // Ensure each author that has this name in their jsonb is linked in the join table
+      for (const author of allAuthors) {
+        const angles = (author.contentAngles as string[] | null) ?? [];
+        if (angles.includes(name)) {
+          await db
+            .insert(schema.authorContentAngles)
+            .values({ authorId: author.id, contentAngleId: angleId })
+            .onConflictDoNothing();
+        }
+      }
+    }
+  }
+
+  // Now load the canonical data
+  const [allAngles, authorAngleLinks] = await Promise.all([
     db.select().from(schema.contentAngles).orderBy(schema.contentAngles.name),
-    db.select({ id: schema.authors.id, name: schema.authors.name }).from(schema.authors).where(eq(schema.authors.active, true)),
+    db.select({ contentAngleId: schema.authorContentAngles.contentAngleId, authorId: schema.authorContentAngles.authorId }).from(schema.authorContentAngles),
   ]);
 
-  // For each angle: which authors have it
-  const authorAngleLinks = await db
-    .select({
-      contentAngleId: schema.authorContentAngles.contentAngleId,
-      authorId: schema.authorContentAngles.authorId,
-    })
-    .from(schema.authorContentAngles);
-
   const authorMap = new Map(allAuthors.map((a) => [a.id, a.name]));
-
   const anglesWithAuthors = allAngles.map((angle) => ({
     ...angle,
     authorIds: authorAngleLinks.filter((l) => l.contentAngleId === angle.id).map((l) => l.authorId),
@@ -48,14 +71,14 @@ export default async function ContentAnglesPage() {
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Global content angles</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          All named angles in the system. Angles can belong to one or many authors, or exist standalone for future use.
+          Every named angle in the system — from all authors and standalone. Angles without an author can be assigned later.
         </p>
       </header>
 
       <ContentAnglesManager
         angles={anglesWithAuthors}
         authorMap={Object.fromEntries(authorMap)}
-        allAuthors={allAuthors}
+        allAuthors={allAuthors.map((a) => ({ id: a.id, name: a.name }))}
       />
     </div>
   );

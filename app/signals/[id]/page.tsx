@@ -207,8 +207,8 @@ export default async function SignalDetailPage({ params }: { params: { id: strin
           )}
 
           <SignalStatsPanel
-            hookStrength={bestPost?.hookStrengthScore ?? null}
-            specificity={bestPost?.specificityScore ?? null}
+            hookStrength={signal.hookStrengthScore ?? bestPost?.hookStrengthScore ?? null}
+            specificity={signal.specificityScore ?? bestPost?.specificityScore ?? null}
             analytics={totalAnalytics}
             postCount={signalPosts.length}
           />
