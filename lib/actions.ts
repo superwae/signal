@@ -420,7 +420,7 @@ export async function generatePostAction(input: {
   let scores = await scorePost(text).catch(() => defaultScores);
 
   const totalScore = (s: typeof scores) => s.hookStrength + s.specificity + s.clarity + s.emotionalResonance + s.callToAction;
-  if (scores.hookStrength < 45 || scores.specificity < 45) {
+  if (totalScore(scores) / 5 < 60) {
     const retry = await generatePost(postInput).catch(() => null);
     if (retry) {
       const retryScores = await scorePost(retry).catch(() => null);

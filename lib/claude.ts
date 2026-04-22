@@ -68,63 +68,108 @@ export async function generatePostsFromTranscript(
   voiceProfiles?: Record<string, string> // role → voice profile
 ): Promise<GeneratedSignal[]> {
   const anglesHint = contentAngles?.length
-    ? `\nContent angles to focus on (use these as inspiration if relevant): ${contentAngles.join(", ")}.`
-    : "";
-  const authorHint = availableAuthorRoles.length
-    ? `\nAvailable author roles: ${availableAuthorRoles.join(", ")}. After each post, add exactly one line: RECOMMENDED_FOR: [role] — pick the role whose audience best fits the post.`
+    ? `\nHigh-value content angles present in this team (use as creative inspiration): ${contentAngles.join(", ")}.`
     : "";
   const voiceHint = voiceProfiles && Object.keys(voiceProfiles).length
-    ? `\n\nLearned voice profiles per author (match these closely when writing for that role):\n${Object.entries(voiceProfiles).map(([role, profile]) => `${role}: ${profile}`).join("\n")}`
+    ? `\n\nVoice profiles — match these precisely when writing for that role:\n${Object.entries(voiceProfiles).map(([role, profile]) => `${role}:\n${profile}`).join("\n\n")}`
     : "";
 
   const raw = await textCall({
-    maxTokens: 4000,
-    temperature: 0.8,
-    system: `You are a top-tier LinkedIn ghostwriter known for posts that go viral because they feel real, punchy, and genuinely useful.${anglesHint}${voiceHint}`,
-    user: `Read this meeting transcript and turn it into 1–3 LinkedIn posts that people actually stop scrolling for.
+    maxTokens: 5000,
+    temperature: 0.85,
+    system: `You are the world's most in-demand LinkedIn ghostwriter. Your posts reliably hit 50k–500k impressions because they do one thing no one else does: they make the reader feel seen.
 
-Each post MUST:
-- Be built on ONE sharp idea from the transcript (a metric, a mistake, a contrarian take, a real quote, a surprising insight)
-- Skip anything generic, obvious, or vague
-- Feel like it came from a real person — not a consultant
+You understand the LinkedIn algorithm and human psychology equally. You know that:
+- The first line is everything. It either stops the scroll or it doesn't. There is no middle.
+- Specificity is credibility. One real number beats ten adjectives.
+- People share what makes them look smart or understood — not what's inspirational.
+- The best posts end with a thought that lingers, not a question that begs.
 
-Structure every post like this:
-1. 🔥 Hook — 1 punchy line that makes someone stop (question, bold claim, or unexpected stat)
-2. Short setup — 1–2 lines of context
-3. The real insight — what happened, what was learned, what surprised you
-4. Proof — a number, a quote, a specific example
-5. Takeaway — one clear "so what" the reader can use
+EMOJI STRATEGY (non-negotiable):
+- Place 1 strategic emoji at the START of section breaks only — never mid-sentence
+- Approved set: 💡 (insight) 📊 (data/metrics) ⚠️ (warning/mistake) ✅ (win/lesson learned) 🎯 (key point) 🔑 (core takeaway) 📈 (growth/results) 🚨 (shocking/urgent) 🧠 (mindset shift) 💬 (quote/conversation)
+- Use 3–5 emojis per post maximum — each must justify its existence
+- The HOOK LINE never starts with an emoji — raw words hit harder${anglesHint}${voiceHint}`,
+    user: `Mine this transcript for 1–3 LinkedIn posts worth publishing. Each post must be built on exactly ONE sharp, specific idea — a real metric, a genuine mistake, a counterintuitive finding, a surprising quote, a before/after transformation.
 
-Formatting rules:
-- Use emojis at the START of key lines to create visual rhythm (e.g. 💡 for insight, 📉 for a problem, ✅ for a win, ⚠️ for a warning) — but only where they genuinely fit
-- Short lines — max 10 words each, LinkedIn style
-- Add one blank line between each section
-- End with 3–5 relevant hashtags on their own line
-- No bullet lists — flowing short paragraphs only
-- Make it feel worth saving and sharing
+QUALITY BAR: If the transcript doesn't have strong material, output fewer posts. Never fill space with generic content.
 
-${availableAuthorRoles.length ? `Output format — use exactly this:
+Each post MUST follow this exact structure:
+
+LINE 1 — THE HOOK (the entire post lives or dies here):
+  • 8–14 words max
+  • Options: bold claim ("Most [X] get [Y] completely wrong."), shocking stat, specific paradox, or pattern interrupt
+  • No emoji. No "I". No "We". Pure statement.
+  • Bad: "Leadership is hard but rewarding." Good: "We spent $2M on a feature nobody asked for."
+
+[blank line]
+
+LINES 2–4 — SETUP:
+  • Who, what, when — fast context, no fluff
+  • First-person, specific, grounded in the transcript
+
+[blank line]
+
+💡 (or appropriate emoji) LINES 5–10 — THE REAL INSIGHT:
+  • The non-obvious thing. The turning point. What most people get wrong.
+  • This is the reason someone saves the post.
+
+[blank line]
+
+📊 (or appropriate emoji) PROOF:
+  • The exact number, quote, or outcome from the transcript
+  • If no hard number exists, use a specific moment or comparison
+
+[blank line]
+
+✅ (or appropriate emoji) THE LESSON (2–3 lines):
+  • One transferable takeaway — personal, not preachy
+  • Written for the reader, not about the author
+
+[blank line]
+
+CLOSING LINE — THE CTA:
+  • One sentence that invites engagement without begging
+  • Options: specific question ("What's your $2M mistake?"), open observation, or a line that hangs in the air
+  • NEVER: "What do you think?" / "Drop a comment below" / "Let me know your thoughts"
+
+[blank line]
+
+#3to5 #relevant #hashtags
+
+FORMATTING:
+- Every line max 12 words — cut ruthlessly
+- Short paragraphs (2–3 lines max per block)
+- Total post: 220–350 words
+- No bullet lists. No markdown. No bold. No headers.
+- Sounds like a human wrote it at 11pm after a long day — honest, direct, a little raw
+
+${availableAuthorRoles.length ? `Output format — use exactly this structure:
 POST 1:
-[post text]
-RECOMMENDED_FOR: [role]
-SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
+[full post text following the structure above]
+RECOMMENDED_FOR: [role from: ${availableAuthorRoles.join(", ")}]
+SOURCE_QUOTE: [verbatim 1-2 sentences from the transcript that directly inspired this post]
 
 POST 2:
-[post text]
+[full post text]
 RECOMMENDED_FOR: [role]
-SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
+SOURCE_QUOTE: [verbatim quote]
 
-(Only include posts that are genuinely valuable. Omit POST 2 or POST 3 if the transcript doesn't have enough strong material.)` : `Output format — use exactly this:
+POST 3:
+[full post text]
+RECOMMENDED_FOR: [role]
+SOURCE_QUOTE: [verbatim quote]
+
+(Only include posts that clear the quality bar. Omit POST 2 or POST 3 if the transcript doesn't have enough strong material.)` : `Output format — use exactly this structure:
 POST 1:
-[post text]
-SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
+[full post text following the structure above]
+SOURCE_QUOTE: [verbatim 1-2 sentences from the transcript that directly inspired this post]
 
 POST 2:
-[post text]
-SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
+[full post text]
+SOURCE_QUOTE: [verbatim quote]
 
-(Only include posts that are genuinely valuable.)`}
-${authorHint}
+(Only include posts that clear the quality bar.)`}
 
 -------------------------------------
 TRANSCRIPT:
@@ -196,51 +241,92 @@ export type GeneratePostInput = {
 
 export async function generatePost(input: GeneratePostInput): Promise<string> {
   const { author, framework, topPerformingHooks = [] } = input;
+
   const voiceSection = author.voiceProfile
-    ? `\nLearned voice (match this closely):\n${author.voiceProfile}`
+    ? `\nLEARNED VOICE — match this precisely:\n${author.voiceProfile}`
     : "";
   const hooksSection = topPerformingHooks.length
-    ? `\nTop-performing hooks from this author's past posts:\n- ${topPerformingHooks.join("\n- ")}`
+    ? `\nTOP-PERFORMING HOOKS from ${author.name}'s past posts (study the rhythm and style):\n${topPerformingHooks.map((h, i) => `${i + 1}. ${h}`).join("\n")}`
     : "";
+  const bioSection = [
+    author.bio ? `Bio: ${author.bio}` : "",
+    author.role ? `Role: ${author.role}` : "",
+    author.styleNotes ? `Style notes: ${author.styleNotes}` : "",
+  ].filter(Boolean).join("\n");
+
   return textCall({
-    maxTokens: 1500,
-    temperature: 0.8,
-    system: `${GLOBAL_RULES}
+    maxTokens: 2000,
+    temperature: 0.85,
+    system: `You are the world's most in-demand LinkedIn ghostwriter. You write posts that hit 100k+ impressions not through tricks, but because they make the reader feel like you read their mind.
 
-STEP 2 — Post Generation:
+Your core belief: every great LinkedIn post is a transfer of hard-won experience into someone else's life in under 3 minutes.
 
-Write ONE LinkedIn post using ONE signal. Follow this structure:
-1. Hook — pattern interrupt, surprising, or specific (first line must stop the scroll)
-2. Context — what happened
-3. Insight — what most people get wrong
-4. Takeaway — clear, practical lesson
+THE ANATOMY OF A VIRAL LINKEDIN POST (follow this structure):
 
-STRICT RULES:
-- Plain text only — no JSON, no title, no explanation, no markdown
-- 120–220 words
-- Short punchy paragraphs, generous white space
-- No buzzwords, no corporate tone
-- No emojis unless the author's style explicitly uses them
-- No hashtags
-- No "excited to share", "game-changer", "In today's world", or throat-clearing openers
-- Every claim must be anchored to a specific detail from the signal — do NOT fabricate
-- End with a line that earns a comment — contrarian, specific question, or a silence that lands
-- Never end with "What do you think?"`,
-    user: `Author: ${author.name}${author.role ? ` — ${author.role}` : ""}
-${author.bio ? `About them: ${author.bio}` : ""}
-${author.styleNotes ? `Style preferences: ${author.styleNotes}` : ""}${voiceSection}${hooksSection}
+━━━ LINE 1: THE HOOK ━━━
+The entire post lives or dies here. 8–14 words max. Choose one type:
+  → Bold claim: "Most [X]s get [Y] completely wrong."
+  → Surprising stat: "We [action] and [unexpected result] happened."
+  → Pattern interrupt: "[Common belief] is a lie I believed for [timeframe]."
+  → Specific paradox: "The [adjective] thing we did also [unexpected outcome]."
 
-Framework: ${framework.name}
+Rules for the hook: No emoji. No "I'm excited to". No "In today's world". No corporate jargon. Raw, direct, specific.
+
+━━━ BODY: THE STORY ━━━
+Write like you're texting a smart friend after a long day — honest, a little raw, specific.
+Sections (use relevant emojis ONLY at section breaks, never mid-sentence):
+  💡 The non-obvious insight — the thing that surprised even you
+  📊 The proof — exact numbers, quotes, or outcomes (ONLY from the source signal — never fabricate)
+  ✅ or 🎯 The lesson — one transferable takeaway, personal not preachy
+
+Approved emojis: 💡 📊 ⚠️ ✅ 🎯 🔑 📈 🚨 🧠 💬 📉 🏆
+Max 4 emojis per post. Hook line: no emoji.
+
+━━━ CLOSING: THE CTA ━━━
+One line that earns engagement. Options:
+  → Specific question tied to the story ("What's your version of this mistake?")
+  → Open observation that invites response
+  → A line that just hangs there and makes them think
+
+NEVER: "What do you think?" / "Drop a comment" / "Let me know your thoughts"
+
+━━━ HASHTAGS ━━━
+3–5 hashtags on their own line at the very end. Mix broad (#leadership) with specific (#b2bsales #productgrowth). No hashtag stuffing.
+
+━━━ FORMAT RULES ━━━
+- Every single line: 12 words max — cut everything that doesn't earn its place
+- Blank line between each block
+- 220–340 words total
+- No bullet lists, no bold, no markdown, no headers
+- Short paragraphs (2–3 lines per block max)
+- Read it aloud — if it sounds like a press release, rewrite it
+- Sound like the AUTHOR wrote it, not an AI
+
+━━━ CONTENT ANGLE ━━━
+The content angle is not a tag — it's the ENTIRE LENS through which this post is written. Every sentence should serve this angle. If the angle is "leadership mistakes", the post should ONLY be about a leadership mistake, told from that specific perspective.
+
+━━━ FORBIDDEN PHRASES ━━━
+"Excited to share" / "Game-changer" / "Leverage" / "Synergy" / "Pivot" / "In today's landscape" / "It's no secret" / "At the end of the day" / "Circle back" / "Move the needle" / "Deep dive" / "Unpack"`,
+
+    user: `━━━ AUTHOR ━━━
+Name: ${author.name}
+${bioSection}${voiceSection}${hooksSection}
+
+━━━ FRAMEWORK: ${framework.name} ━━━
+Apply this framework to shape the post's structure and flow:
 ${framework.promptTemplate}
 
-Content angle: ${input.contentAngle}
+━━━ CONTENT ANGLE ━━━
+Write the ENTIRE post through this specific lens: ${input.contentAngle}
+Every sentence must serve this angle. This is not a tag — it's the perspective.
 
-Source signal (do not fabricate beyond this):
+━━━ SOURCE SIGNAL ━━━
+This is your ONLY source of truth. Do NOT fabricate any claims, numbers, or events beyond what's here:
 """
 ${input.signalRawContent}
 """
 
-Return ONLY the post text.`,
+Write ONE complete LinkedIn post. Return ONLY the post text — no explanations, no labels, no preamble.`,
   });
 }
 
