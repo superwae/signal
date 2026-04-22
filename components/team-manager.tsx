@@ -49,14 +49,22 @@ export function TeamManager({ users }: { users: User[] }) {
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           className="h-9 text-sm"
         />
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as "admin" | "user")}
-          className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-        >
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
+        <div className="flex h-9 items-center rounded-md border border-input bg-background p-0.5 gap-0.5">
+          {(["user", "admin"] as const).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRole(r)}
+              className={`h-full px-3 rounded text-xs font-medium capitalize transition-colors ${
+                role === r
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
         <Button size="sm" onClick={handleAdd} disabled={isPending || !email.trim()}>
           <UserPlus className="h-4 w-4" />
           Add
