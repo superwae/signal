@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
 import { eq, desc, inArray, sql } from "drizzle-orm";
@@ -9,11 +9,15 @@ import { ArrowLeft, Radio, ArrowUpRight } from "lucide-react";
 import { PostEditor } from "./post-editor";
 import { AuthorCard, SignalAnglesCard, TranscriptCard, SignalStatsPanel, SourceExcerptCard } from "./sidebar-cards";
 import { ScoresProvider } from "./scores-provider";
+import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function SignalDetailPage({ params }: { params: { id: string } }) {
+  const session = await getCurrentUser();
+  if (!session?.isAdmin && !session?.isSuperAdmin) redirect("/drafts");
+
   const id = Number(params.id);
 
   const [signal, allAuthors, frameworks, allAngles] = await Promise.all([

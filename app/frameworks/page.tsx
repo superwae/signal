@@ -1,14 +1,18 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { db, schema } from "@/lib/db";
 import { desc } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { FrameworkCard } from "./framework-card";
 import { Layers, Plus } from "lucide-react";
+import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function FrameworksPage() {
+  const session = await getCurrentUser();
+  if (!session?.isAdmin && !session?.isSuperAdmin) redirect("/drafts");
   const frameworks = await db.select().from(schema.frameworks).orderBy(desc(schema.frameworks.createdAt)).catch(() => []);
   return (
     <div className="mx-auto w-full max-w-4xl p-6 md:p-10">

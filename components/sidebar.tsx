@@ -7,27 +7,35 @@ import { LayoutDashboard, Radio, Users, BarChart3, Wrench, Sun, Moon, LogOut, Fi
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 
-function useUserIdentity() {
-  const [display, setDisplay] = useState("");
+type Identity = { display: string; isAdmin: boolean };
+
+function useUserIdentity(): Identity {
+  const [identity, setIdentity] = useState<Identity>({ display: "", isAdmin: false });
   useEffect(() => {
     const match = document.cookie.match(/(?:^|;\s*)signal_email=([^;]*)/);
     const email = match ? decodeURIComponent(match[1]) : "";
     if (!email) return;
     fetch("/api/auth/me")
       .then((r) => r.json())
-      .then((d) => setDisplay(d.name || email))
-      .catch(() => setDisplay(email));
+      .then((d) => setIdentity({ display: d.name || email, isAdmin: !!d.isAdmin || !!d.isSuperAdmin }))
+      .catch(() => setIdentity({ display: email, isAdmin: false }));
   }, []);
-  return display;
+  return identity;
 }
 
-const items = [
+const ADMIN_ITEMS = [
   { href: "/",           label: "Dashboard",  icon: LayoutDashboard },
   { href: "/signals",    label: "Signals",    icon: Radio },
   { href: "/drafts",     label: "Drafts",     icon: FileEdit },
   { href: "/authors",    label: "Authors",    icon: Users },
   { href: "/analytics",  label: "Analytics",  icon: BarChart3 },
   { href: "/frameworks", label: "Frameworks", icon: Wrench },
+];
+
+const USER_ITEMS = [
+  { href: "/",        label: "Dashboard", icon: LayoutDashboard },
+  { href: "/drafts",  label: "My posts",  icon: FileEdit },
+  { href: "/authors", label: "Profile",   icon: Users },
 ];
 
 function SignalLogo() {
@@ -56,7 +64,8 @@ function SignalLogo() {
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
-  const display = useUserIdentity();
+  const { display, isAdmin } = useUserIdentity();
+  const items = isAdmin ? ADMIN_ITEMS : USER_ITEMS;
 
   return (
     <aside className="hidden md:flex md:flex-col w-64 shrink-0 min-h-screen

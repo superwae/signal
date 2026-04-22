@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
-import { desc, eq, inArray, sql } from "drizzle-orm";
+import { desc, eq, inArray, sql, and } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
 import { FileEdit, ArrowUpRight, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 const TABS = [
   { key: "drafts",   label: "In review", statuses: ["draft", "in_review"] as const, icon: FileEdit,      color: "text-blue-500"   },
@@ -17,8 +19,15 @@ const TABS = [
 type TabKey = typeof TABS[number]["key"];
 
 export default async function DraftsPage({ searchParams }: { searchParams: { tab?: string } }) {
+  const session = await getCurrentUser();
+  const isRegularUser = !session?.isAdmin && !session?.isSuperAdmin;
+  const scopedAuthorId = isRegularUser ? (session?.authorId ?? null) : null;
+
   const activeTab: TabKey = (searchParams.tab as TabKey) ?? "drafts";
   const tab = TABS.find((t) => t.key === activeTab) ?? TABS[0];
+
+  const statusCondition = sql`${schema.posts.status} = ANY(ARRAY[${sql.join(tab.statuses.map(s => sql`${s}`), sql`, `)}]::text[])`;
+  const authorCondition = scopedAuthorId ? eq(schema.posts.authorId, scopedAuthorId) : undefined;
 
   const posts = await db
     .select({
@@ -34,7 +43,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
       updatedAt: schema.posts.updatedAt,
     })
     .from(schema.posts)
-    .where(sql`${schema.posts.status} = ANY(ARRAY[${sql.join(tab.statuses.map(s => sql`${s}`), sql`, `)}]::text[])`)
+    .where(authorCondition ? and(statusCondition, authorCondition) : statusCondition)
     .orderBy(desc(schema.posts.updatedAt))
     .catch(() => []);
 
@@ -44,12 +53,15 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
     : [];
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
 
-  // Counts for tab badges
-  const counts = await db
+  // Counts for tab badges — scoped to same author filter
+  const countsQuery = db
     .select({ status: schema.posts.status, count: sql<number>`count(*)::int` })
     .from(schema.posts)
-    .groupBy(schema.posts.status)
-    .catch(() => []);
+    .groupBy(schema.posts.status);
+  const counts = await (authorCondition
+    ? countsQuery.where(authorCondition)
+    : countsQuery
+  ).catch(() => []);
 
   const countByStatus: Record<string, number> = {};
   for (const row of counts) {
@@ -65,11 +77,13 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
       <header className="mb-8">
         <div className="flex items-center gap-2 mb-1">
           <FileEdit className="h-4 w-4 text-blue-500" />
-          <span className="text-xs font-semibold text-blue-500 uppercase tracking-widest">In review</span>
+          <span className="text-xs font-semibold text-blue-500 uppercase tracking-widest">{isRegularUser ? "My posts" : "In review"}</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Posts</h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Review in-progress posts, track approved ones, and manage rejections.
+          {isRegularUser
+            ? "Posts written for you — review, edit, and approve before they go live."
+            : "Review in-progress posts, track approved ones, and manage rejections."}
         </p>
       </header>
 
@@ -112,7 +126,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
           <p className="text-sm font-medium">No {tab.label.toLowerCase()} yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
             {tab.key === "drafts"
-              ? "Generate a post from a signal to see it here in review."
+              ? isRegularUser ? "Your admin will send posts here for you to review." : "Generate a post from a signal to see it here in review."
               : tab.key === "accepted"
               ? "Approved posts will appear here."
               : "Rejected posts will appear here."}

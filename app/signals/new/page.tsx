@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,12 @@ import { Loader2, Sparkles, Radio } from "lucide-react";
 export default function NewSignalsPage() {
   const router = useRouter();
   const [transcript, setTranscript] = useState("");
+
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => r.json()).then(d => {
+      if (!d.isAdmin && !d.isSuperAdmin) router.replace("/drafts");
+    }).catch(() => {});
+  }, [router]);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);

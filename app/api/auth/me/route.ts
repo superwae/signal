@@ -5,14 +5,14 @@ import { eq } from "drizzle-orm";
 
 export async function GET() {
   const session = await getCurrentUser();
-  if (!session) return NextResponse.json({ name: null });
+  if (!session) return NextResponse.json({ name: null, isAdmin: false, isSuperAdmin: false });
 
-  // Superadmin / env admins: look up by author email if they have one
+  const meta = { isAdmin: session.isAdmin ?? false, isSuperAdmin: session.isSuperAdmin ?? false };
+
   if (session.authorId) {
     const [author] = await db.select({ name: schema.authors.name }).from(schema.authors).where(eq(schema.authors.id, session.authorId)).limit(1).catch(() => []);
-    if (author?.name) return NextResponse.json({ name: author.name });
+    if (author?.name) return NextResponse.json({ name: author.name, ...meta });
   }
 
-  // Fall back to email
-  return NextResponse.json({ name: session.email });
+  return NextResponse.json({ name: session.email, ...meta });
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { db, schema } from "@/lib/db";
 import { desc, ne, eq, and, ilike, gte, lte, sql, inArray } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ export default async function SignalsPage({
   const { q, author, angle, from, to } = searchParams;
 
   const session = await getCurrentUser();
+  if (!session?.isAdmin && !session?.isSuperAdmin) redirect("/drafts");
+
   const conditions: any[] = [ne(schema.signals.status, "archived")];
 
   if (session?.isSuperAdmin) {

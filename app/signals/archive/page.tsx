@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { db, schema } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
@@ -6,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Archive } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
 import { ArchiveActions } from "./archive-actions";
+import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function ArchivePage() {
+  const session = await getCurrentUser();
+  if (!session?.isAdmin && !session?.isSuperAdmin) redirect("/drafts");
   const [archived, authors] = await Promise.all([
     db
       .select()
