@@ -14,7 +14,7 @@ import { Loader2, UserPlus } from "lucide-react";
 export default function NewAuthorPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", role: "", bio: "", linkedinUrl: "", styleNotes: "" });
+  const [form, setForm] = useState({ name: "", role: "", bio: "", linkedinUrl: "", styleNotes: "", email: "" });
 
   async function submit() {
     if (!form.name) return;
@@ -53,6 +53,9 @@ export default function NewAuthorPage() {
           </Field>
           <Field label="Role">
             <Input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="CTO, Head of Sales, ..." />
+          </Field>
+          <Field label="Email (grants login access)">
+            <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@company.com" />
           </Field>
           <Field label="LinkedIn URL">
             <Input value={form.linkedinUrl} onChange={(e) => setForm({ ...form, linkedinUrl: e.target.value })} placeholder="https://linkedin.com/in/..." />

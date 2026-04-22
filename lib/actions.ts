@@ -286,7 +286,9 @@ export async function createAuthorAction(input: {
   bio?: string;
   linkedinUrl?: string;
   styleNotes?: string;
+  email?: string;
 }) {
+  const email = input.email?.toLowerCase().trim() || null;
   const [row] = await db
     .insert(schema.authors)
     .values({
@@ -295,8 +297,18 @@ export async function createAuthorAction(input: {
       bio: input.bio ?? null,
       linkedinUrl: input.linkedinUrl ?? null,
       styleNotes: input.styleNotes ?? null,
+      email,
     })
     .returning();
+
+  // Grant login access for this author
+  if (email) {
+    await db
+      .insert(schema.users)
+      .values({ email, role: "user" })
+      .onConflictDoNothing();
+  }
+
   revalidatePath("/authors");
   return row;
 }

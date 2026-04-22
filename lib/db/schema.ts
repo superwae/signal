@@ -65,6 +65,7 @@ export const authors = pgTable("authors", {
   styleNotes: text("style_notes"),
   preferredFrameworks: jsonb("preferred_frameworks").$type<number[]>().default([]),
   contentAngles: jsonb("content_angles").$type<string[]>(),
+  email: varchar("email", { length: 256 }),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   fathomAccessToken: text("fathom_access_token"),
