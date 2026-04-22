@@ -174,6 +174,9 @@ export default async function SignalsPage({
                       className="group flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-glow-sm hover:-translate-y-0.5"
                     >
                       <div className="min-w-0 flex-1">
+                        {(s as any).title && (
+                          <p className="text-[11px] font-semibold text-blue-500/80 uppercase tracking-wide mb-0.5 truncate">{(s as any).title}</p>
+                        )}
                         <p className="line-clamp-2 text-sm font-medium leading-snug">{firstLine}</p>
                         <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                           <Badge variant={s.status === "unused" ? "warning" : s.status === "used" ? "success" : "secondary"}>
@@ -185,10 +188,13 @@ export default async function SignalsPage({
                               {authorName}
                             </span>
                           )}
-                          {taggedAngles.slice(0, 3).map((tag) => (
+                          {taggedAngles.slice(0, 2).map((tag) => (
                             <span key={tag} className="rounded-full bg-purple-500/8 px-2 py-0.5 text-[10px] font-medium text-purple-600 dark:text-purple-400">
                               {tag}
                             </span>
+                          ))}
+                          {((s as any).hashtags as string[] | null)?.slice(0, 3).map((h: string) => (
+                            <span key={h} className="text-muted-foreground/60">#{h}</span>
                           ))}
                           <span className="text-muted-foreground/40">·</span>
                           <span>{timeAgo(s.createdAt)}</span>

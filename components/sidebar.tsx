@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Radio, Users, BarChart3, Wrench, Sun, Moon, LogOut, FileEdit } from "lucide-react";
+import { LayoutDashboard, Radio, Users, BarChart3, Wrench, Sun, Moon, LogOut, FileEdit, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
 
@@ -30,12 +30,13 @@ const ADMIN_ITEMS = [
   { href: "/authors",    label: "Authors",    icon: Users },
   { href: "/analytics",  label: "Analytics",  icon: BarChart3 },
   { href: "/frameworks", label: "Frameworks", icon: Wrench },
+  { href: "/settings",   label: "Settings",   icon: Settings },
 ];
 
 const USER_ITEMS = [
-  { href: "/",        label: "Dashboard", icon: LayoutDashboard },
-  { href: "/drafts",  label: "My posts",  icon: FileEdit },
-  { href: "/authors", label: "Profile",   icon: Users },
+  { href: "/",         label: "Dashboard", icon: LayoutDashboard },
+  { href: "/drafts",   label: "My posts",  icon: FileEdit },
+  { href: "/settings", label: "Settings",  icon: Settings },
 ];
 
 function SignalLogo() {

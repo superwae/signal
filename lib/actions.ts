@@ -59,7 +59,9 @@ export async function extractSignalsAction(
       ? frameworks.find((f) => f.name.toLowerCase() === s.frameworkName!.toLowerCase())
       : undefined;
     return {
+      title: s.title ?? null,
       rawContent: s.rawContent,
+      hashtags: s.hashtags ?? [],
       contentType: "post",
       speaker: null as string | null,
       contentAngles: s.contentAngle ? [s.contentAngle] : ([] as string[]),
@@ -101,6 +103,29 @@ export async function extractSignalsAction(
   revalidatePath("/signals");
   revalidatePath("/");
   return { inserted: inserted.length, signals: inserted };
+}
+
+export async function createManualSignalAction(data: {
+  title: string;
+  content: string;
+  hashtags: string[];
+  authorId?: number | null;
+}) {
+  if (!data.content || data.content.trim().length < 20) {
+    throw new Error("Signal content is too short.");
+  }
+  const [inserted] = await db.insert(schema.signals).values({
+    title: data.title || null,
+    rawContent: data.content.trim(),
+    hashtags: data.hashtags,
+    contentType: "post",
+    source: "manual",
+    recommendedAuthorId: data.authorId ?? null,
+    contentAngles: [],
+  }).returning();
+  revalidatePath("/signals");
+  revalidatePath("/");
+  return inserted;
 }
 
 export async function updateSignalContentAction(id: number, content: string) {

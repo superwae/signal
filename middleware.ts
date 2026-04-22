@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   "/api/fathom/webhook",
   "/api/fathom/oauth/callback",
   "/api/linkedin/oauth/callback",
+  "/api/google/oauth/callback",
   "/api/cron",
 ];
 

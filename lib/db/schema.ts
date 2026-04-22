@@ -41,7 +41,9 @@ export const transcripts = pgTable("transcripts", {
 /** A piece of raw content captured from a meeting that could become a post. */
 export const signals = pgTable("signals", {
   id: serial("id").primaryKey(),
+  title: varchar("title", { length: 256 }),
   rawContent: text("raw_content").notNull(),
+  hashtags: jsonb("hashtags").$type<string[]>().default([]),
   contentType: varchar("content_type", { length: 64 }).notNull(),
   vertical: varchar("vertical", { length: 64 }),
   source: varchar("source", { length: 64 }).default("manual"),

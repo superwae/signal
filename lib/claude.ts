@@ -56,7 +56,9 @@ function extractJson<T>(raw: string): T {
 /* ---------- post generation from transcript ---------- */
 
 export type GeneratedSignal = {
+  title?: string;
   rawContent: string;
+  hashtags?: string[];
   recommendedAuthorRole?: string;
   contentAngle?: string;
   frameworkName?: string;
@@ -92,7 +94,7 @@ export async function generatePostsFromTranscript(
 
   const raw = await textCall({
     maxTokens: 5000,
-    temperature: 0.85,
+    temperature: 0.7,
     system: `${GLOBAL_RULES}
 
 TRANSCRIPT LANGUAGE & QUALITY (critical — read before processing):
@@ -100,45 +102,51 @@ TRANSCRIPT LANGUAGE & QUALITY (critical — read before processing):
 - Arabic transcription is often noisy. Errors include: wrong homophones, missing short vowels, garbled proper nouns, run-on words, and speaker-label mistakes. Use surrounding context to infer the true meaning — do not discard a segment just because individual words look wrong.
 - Arabic speakers frequently use English technical or business terms but pronounce them in Arabic, so they appear in Arabic script (e.g., "ميتنج" = meeting, "بريزنتيشن" = presentation, "ديدلاين" = deadline, "فيدباك" = feedback, "تارجت" = target, "كلاينت" = client, "ريفينيو" = revenue, "بيتشينج" = pitching, "أونبوردينج" = onboarding, "ستريتيجي" = strategy, "ماركيتنج" = marketing, "فريلانس" = freelance, "أوفر" = offer, "ديل" = deal). Recognise these phonetic Arabic spellings and treat them as their English equivalents when extracting insights.
 - If a number, metric, or key claim is partially garbled, note the closest plausible reading and still include the insight — flag uncertainty only if the meaning is truly ambiguous.
-- Always write the OUTPUT posts in fluent English regardless of the transcript language.`,
-    user: `You have a meeting transcript and a team of authors, each with specific content angles they write about.
+- Always write the OUTPUT in fluent English regardless of the transcript language.`,
+    user: `You are extracting high-value content signals from a meeting transcript. A signal is a specific, real, shareable insight — not a topic, not a vague theme.
 
-Read the full transcript, then extract the best 1–5 LinkedIn post ideas. For each idea:
-1. Pick the author whose content angles best match the insight
-2. Identify which specific content angle it maps to
-3. Recommend the best framework for that author
-4. Write a post draft in that author's voice
+PHASE 1 — MINE THE TRANSCRIPT FOR GENUINE VALUE
+Scan for moments that are actually worth sharing publicly. A moment qualifies only if it contains at least one of:
+- A real decision made and WHY (the reasoning that others rarely share)
+- A counterintuitive lesson — something that contradicts conventional advice
+- A concrete outcome with real numbers, timelines, or before/after evidence
+- A process or framework the team actually uses — specific, not theoretical
+- A mistake or failure and what it revealed
+- A strong, defensible opinion on something people argue about
 
-QUALITY BAR: Only extract ideas with sharp, specific, real moments — a genuine decision, a counterintuitive lesson, a surprising outcome, a concrete before/after. If the transcript has weak material, output fewer posts. Never fill space with generic content.
+REJECT: small talk, status updates, vague plans, obvious statements, anything without a specific detail anchoring it.
 
-POST STRUCTURE (natural shape, not a rigid template):
-- Opening: pull the reader in with a human moment, question, or confession — short, conversational, never corporate
-- Honest answer: direct, before the story
-- The story: what happened, what changed — specific details from the transcript
-- The insight: the non-obvious thing, quiet not preachy
-- Closing: one specific question to a named audience — never "What do you think?"
-- 2–4 relevant hashtags at the end
-- 180–320 words, flowing prose, no bullet points or markdown
+If nothing meets this bar → return 0 signals. Never manufacture content to fill space.
+
+PHASE 2 — MATCH TO THE RIGHT AUTHOR AND ANGLE
+For each qualified moment:
+1. Pick the author whose content angles genuinely match the insight — don't force a match
+2. Identify the exact content angle it maps to
+3. Extract the core insight as a raw, honest paragraph (3–6 sentences) — write it from the author's perspective, grounded entirely in what was said. Include specific details, numbers, or context from the transcript. This is a working note, not a polished post.
 
 AUTHORS AND THEIR CONTENT ANGLES:
 ${authorBlock || `Any role from: ${fallbackRoles.join(", ")}`}
 
-Output format — use exactly this structure for each post:
+Output format — use exactly this structure for each signal:
 POST 1:
-[full post text]
+TITLE: [punchy 6–10 word hook title that captures the core insight — no fluff]
+[3–6 sentence raw insight paragraph, written from author's perspective, using only facts from the transcript — specific, grounded, honest. Use emojis only where they genuinely punctuate a point — not decorative, not forced. Some signals need none, others need two or three. Let the content decide. This becomes the source material for a LinkedIn post.]
+HASHTAGS: [3–5 relevant hashtags, comma-separated, no # symbol — e.g. leadership, b2bsales, startups]
 RECOMMENDED_FOR: [author role]
-CONTENT_ANGLE: [the specific content angle from that author's list that this post matches]
-FRAMEWORK: [recommended framework name, or leave blank if none applies]
-SOURCE_QUOTE: [verbatim 1–2 sentences from the transcript that inspired this post]
+CONTENT_ANGLE: [the specific content angle this maps to]
+FRAMEWORK: [recommended framework name, or leave blank]
+SOURCE_QUOTE: [exact 1–2 sentences from the transcript that anchor this insight]
 
 POST 2:
-[full post text]
+TITLE: [hook title]
+[raw insight paragraph with 1–2 emojis]
+HASHTAGS: [hashtags]
 RECOMMENDED_FOR: [author role]
 CONTENT_ANGLE: [content angle]
 FRAMEWORK: [framework name or blank]
 SOURCE_QUOTE: [verbatim quote]
 
-(Continue for up to 5 posts. Omit any post that doesn't clear the quality bar.)
+(Up to 5 signals. Omit any that don't pass Phase 1. Quality over quantity.)
 
 -------------------------------------
 TRANSCRIPT:
@@ -154,14 +162,21 @@ ${transcript.slice(0, 40000)}
         const idx = lines.findIndex((l) => prefix.test(l.trim()));
         return idx !== -1 ? { value: lines[idx].replace(prefix, "").trim(), idx } : { value: undefined, idx: -1 };
       };
+      const title = pick(/^TITLE:\s*/i);
       const rec = pick(/^RECOMMENDED_FOR:\s*/i);
       const angle = pick(/^CONTENT_ANGLE:\s*/i);
       const framework = pick(/^FRAMEWORK:\s*/i);
       const quote = pick(/^SOURCE_QUOTE:\s*/i);
-      const skipIdxs = new Set([rec.idx, angle.idx, framework.idx, quote.idx].filter((i) => i !== -1));
+      const hashtagsField = pick(/^HASHTAGS:\s*/i);
+      const hashtags = hashtagsField.value
+        ? hashtagsField.value.split(",").map((h) => h.trim().replace(/^#/, "")).filter(Boolean)
+        : undefined;
+      const skipIdxs = new Set([title.idx, rec.idx, angle.idx, framework.idx, quote.idx, hashtagsField.idx].filter((i) => i !== -1));
       const content = lines.filter((_, i) => !skipIdxs.has(i)).join("\n").trim();
       return {
+        title: title.value,
         rawContent: content,
+        hashtags,
         recommendedAuthorRole: rec.value,
         contentAngle: angle.value,
         frameworkName: framework.value || undefined,
