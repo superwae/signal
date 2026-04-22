@@ -2,14 +2,14 @@ import { cookies } from "next/headers";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 
-const SUPERADMIN_EMAIL = "moh.awwad.243@gmail.com";
+const SUPERADMIN_EMAIL = "moh.awwad243@gmail.com";
 
 export type SessionUser = {
   email: string;
   role: "superadmin" | "admin" | "user";
   authorId: number | null;
   isSuperAdmin: boolean;
-  isAdmin: boolean; // true for superadmin and admin
+  isAdmin: boolean;
 };
 
 export async function getCurrentUser(): Promise<SessionUser | null> {
@@ -17,10 +17,22 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   const email = cookieStore.get("signal_email")?.value?.toLowerCase().trim();
   if (!email) return null;
 
+  // Hardcoded superadmin
   if (email === SUPERADMIN_EMAIL) {
     return { email, role: "superadmin", authorId: null, isSuperAdmin: true, isAdmin: true };
   }
 
+  // Env-var admins (ALLOWED_EMAILS) are treated as superadmin-level
+  const envAdmins = (process.env.ALLOWED_EMAILS ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (envAdmins.includes(email)) {
+    return { email, role: "superadmin", authorId: null, isSuperAdmin: true, isAdmin: true };
+  }
+
+  // DB users
   const [user] = await db
     .select()
     .from(schema.users)
