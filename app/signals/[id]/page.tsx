@@ -8,7 +8,7 @@ import { timeAgo } from "@/lib/utils";
 import { ArrowLeft, Radio, ArrowUpRight } from "lucide-react";
 import { PostEditor } from "./post-editor";
 import { SignalGenerateForm } from "./generate-form";
-import { AuthorCard, SignalAnglesCard, TranscriptCard, SignalStatsPanel } from "./sidebar-cards";
+import { AuthorCard, SignalAnglesCard, TranscriptCard, SignalStatsPanel, SourceExcerptCard } from "./sidebar-cards";
 import { ScoresProvider } from "./scores-provider";
 
 export const dynamic = "force-dynamic";
@@ -252,6 +252,10 @@ export default async function SignalDetailPage({ params }: { params: { id: strin
             analytics={totalAnalytics}
             postCount={signalPosts.length}
           />
+
+          {(signal as any).sourceExcerpt && (
+            <SourceExcerptCard excerpt={(signal as any).sourceExcerpt} />
+          )}
         </aside>
       </div>
       </ScoresProvider>

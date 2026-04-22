@@ -276,6 +276,25 @@ export function TranscriptCard({ transcript }: { transcript: string }) {
   );
 }
 
+/* ─── Source Excerpt Card ─── */
+export function SourceExcerptCard({ excerpt }: { excerpt: string }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-1.5">
+          <FileText className="h-3.5 w-3.5 text-amber-500" />
+          Source passage
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <blockquote className="border-l-2 border-amber-400/50 pl-3 text-xs text-muted-foreground leading-relaxed italic">
+          {excerpt}
+        </blockquote>
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ─── Stats Panel ─── */
 export function SignalStatsPanel({
   analytics,

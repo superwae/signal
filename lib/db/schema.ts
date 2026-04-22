@@ -42,6 +42,7 @@ export const signals = pgTable("signals", {
   recommendedAuthorId: integer("recommended_author_id"),
   bestFrameworkId: integer("best_framework_id"),
   sourceTranscript: text("source_transcript"),
+  sourceExcerpt: text("source_excerpt"),
   hookStrengthScore: integer("hook_strength_score"),
   specificityScore: integer("specificity_score"),
   clarityScore: integer("clarity_score"),

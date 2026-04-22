@@ -5,7 +5,7 @@ import { desc, ne, eq, and, ilike, gte, lte, sql } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
-import { Plus, User, Archive, Radio, ArrowUpRight } from "lucide-react";
+import { Plus, User, Archive, Radio, ArrowUpRight, FileText } from "lucide-react";
 import { SignalFilterBar } from "./filter-bar";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +34,36 @@ export default async function SignalsPage({
 
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
   const isFiltered = !!(q || author || angle || from || to);
+
+  // Group signals by meeting (sourceMeetingTitle / sourceMeetingId). Null = manually created.
+  type SignalRow = typeof signals[number];
+  type Group = {
+    key: string | null;
+    title: string | null;
+    date: Date | null;
+    signals: SignalRow[];
+  };
+
+  const groupMap = new Map<string | null, Group>();
+  for (const s of signals) {
+    const key = s.sourceMeetingId ?? s.sourceMeetingTitle ?? null;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        key,
+        title: s.sourceMeetingTitle ?? null,
+        date: s.sourceMeetingDate ?? s.createdAt,
+        signals: [],
+      });
+    }
+    groupMap.get(key)!.signals.push(s);
+  }
+
+  // Sorted: meetings first (most recent), then null group at the end
+  const groups = [...groupMap.values()].sort((a, b) => {
+    if (a.key === null) return 1;
+    if (b.key === null) return -1;
+    return (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0);
+  });
 
   return (
     <div className="mx-auto w-full max-w-6xl p-6 md:p-10">
@@ -91,48 +121,68 @@ export default async function SignalsPage({
           )}
         </div>
       ) : (
-        <div className="grid gap-2.5">
-          {signals.map((s) => {
-            const authorName = s.recommendedAuthorId ? authorMap.get(s.recommendedAuthorId) : null;
-            const firstLine = s.rawContent.split("\n").find((l) => l.trim()) ?? s.rawContent;
-            const taggedAngles = (s.contentAngles as string[] | null) ?? [];
-            return (
-              <Link
-                key={s.id}
-                href={`/signals/${s.id}`}
-                className="group flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-glow-sm hover:-translate-y-0.5"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-sm font-medium leading-snug">{firstLine}</p>
-                  <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                    <Badge variant={s.status === "unused" ? "warning" : s.status === "used" ? "success" : "secondary"}>
-                      {s.status}
-                    </Badge>
-                    {authorName && (
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {authorName}
-                      </span>
-                    )}
-                    {taggedAngles.slice(0, 3).map((tag) => (
-                      <span key={tag} className="rounded-full bg-purple-500/8 px-2 py-0.5 text-[10px] font-medium text-purple-600 dark:text-purple-400">
-                        {tag}
-                      </span>
-                    ))}
-                    {s.sourceMeetingTitle && (
-                      <>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span>{s.sourceMeetingTitle}</span>
-                      </>
-                    )}
-                    <span className="text-muted-foreground/40">·</span>
-                    <span>{timeAgo(s.createdAt)}</span>
-                  </div>
+        <div className="space-y-8">
+          {groups.map((group) => (
+            <div key={group.key ?? "__none__"}>
+              {/* Group header */}
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+                  <span className="text-sm font-semibold truncate">
+                    {group.title ?? "No transcript"}
+                  </span>
+                  <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {group.signals.length} signal{group.signals.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
-                <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Link>
-            );
-          })}
+                {group.date && group.key !== null && (
+                  <span className="shrink-0 text-[11px] text-muted-foreground/60">
+                    {group.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                )}
+                <div className="flex-1 h-px bg-border/60" />
+              </div>
+
+              {/* Signals in this group */}
+              <div className="grid gap-2">
+                {group.signals.map((s) => {
+                  const authorName = s.recommendedAuthorId ? authorMap.get(s.recommendedAuthorId) : null;
+                  const firstLine = s.rawContent.split("\n").find((l) => l.trim()) ?? s.rawContent;
+                  const taggedAngles = (s.contentAngles as string[] | null) ?? [];
+                  return (
+                    <Link
+                      key={s.id}
+                      href={`/signals/${s.id}`}
+                      className="group flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-glow-sm hover:-translate-y-0.5"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm font-medium leading-snug">{firstLine}</p>
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                          <Badge variant={s.status === "unused" ? "warning" : s.status === "used" ? "success" : "secondary"}>
+                            {s.status}
+                          </Badge>
+                          {authorName && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {authorName}
+                            </span>
+                          )}
+                          {taggedAngles.slice(0, 3).map((tag) => (
+                            <span key={tag} className="rounded-full bg-purple-500/8 px-2 py-0.5 text-[10px] font-medium text-purple-600 dark:text-purple-400">
+                              {tag}
+                            </span>
+                          ))}
+                          <span className="text-muted-foreground/40">·</span>
+                          <span>{timeAgo(s.createdAt)}</span>
+                        </div>
+                      </div>
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

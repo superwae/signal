@@ -46,6 +46,7 @@ export async function extractSignalsAction(
       sourceMeetingTitle: meetingTitle ?? null,
       sourceMeetingDate: meetingDate ? new Date(meetingDate) : null,
       sourceTranscript: transcript,
+      sourceExcerpt: s.sourceExcerpt ?? null,
     };
   });
   const inserted = await db.insert(schema.signals).values(rows).returning();

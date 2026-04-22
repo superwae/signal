@@ -58,6 +58,7 @@ function extractJson<T>(raw: string): T {
 export type GeneratedSignal = {
   rawContent: string;
   recommendedAuthorRole?: string;
+  sourceExcerpt?: string;
 };
 
 export async function generatePostsFromTranscript(
@@ -106,17 +107,21 @@ ${availableAuthorRoles.length ? `Output format — use exactly this:
 POST 1:
 [post text]
 RECOMMENDED_FOR: [role]
+SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
 
 POST 2:
 [post text]
 RECOMMENDED_FOR: [role]
+SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
 
 (Only include posts that are genuinely valuable. Omit POST 2 or POST 3 if the transcript doesn't have enough strong material.)` : `Output format — use exactly this:
 POST 1:
 [post text]
+SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
 
 POST 2:
 [post text]
+SOURCE_QUOTE: [verbatim sentence or two from the transcript that directly inspired this post]
 
 (Only include posts that are genuinely valuable.)`}
 ${authorHint}
@@ -132,15 +137,16 @@ ${transcript.slice(0, 40000)}
     .map((part) => {
       const lines = part.trim().split("\n");
       const recIdx = lines.findIndex((l) => /^RECOMMENDED_FOR:/i.test(l.trim()));
+      const quoteIdx = lines.findIndex((l) => /^SOURCE_QUOTE:/i.test(l.trim()));
       const recommendedAuthorRole =
-        recIdx !== -1
-          ? lines[recIdx].replace(/^RECOMMENDED_FOR:\s*/i, "").trim()
-          : undefined;
+        recIdx !== -1 ? lines[recIdx].replace(/^RECOMMENDED_FOR:\s*/i, "").trim() : undefined;
+      const sourceExcerpt =
+        quoteIdx !== -1 ? lines[quoteIdx].replace(/^SOURCE_QUOTE:\s*/i, "").trim() : undefined;
       const content = lines
-        .filter((_, i) => i !== recIdx)
+        .filter((_, i) => i !== recIdx && i !== quoteIdx)
         .join("\n")
         .trim();
-      return { rawContent: content, recommendedAuthorRole };
+      return { rawContent: content, recommendedAuthorRole, sourceExcerpt };
     })
     .filter((p) => p.rawContent.length > 80);
 }
