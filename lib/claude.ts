@@ -490,6 +490,54 @@ Rules:
   };
 }
 
+/* ---------- linkedin page scrape analysis ---------- */
+
+export async function analyzeLinkedinPageContent(
+  scrapedText: string,
+  availableFrameworks: { name: string; description: string }[]
+): Promise<LinkedinProfileAnalysis> {
+  const frameworkList = availableFrameworks.map((f) => `- ${f.name}: ${f.description}`).join("\n");
+
+  const raw = await textCall({
+    maxTokens: 1500,
+    temperature: 0.3,
+    system: `${GLOBAL_RULES}
+
+You are analyzing scraped content from a LinkedIn profile page to build a writing profile for an AI ghostwriter.
+The input is raw text extracted from the page — it may include navigation, UI elements, and other noise alongside the actual posts and profile info. Focus only on the meaningful content: posts, headlines, bio, and descriptions of their work.`,
+    user: `Analyze this LinkedIn page content and return a JSON writing profile.
+
+AVAILABLE FRAMEWORKS (match the author's natural style to one or more):
+${frameworkList}
+
+SCRAPED PAGE CONTENT:
+${scrapedText.slice(0, 30000)}
+
+Return ONLY valid JSON in this exact shape:
+{
+  "contentAngles": ["topic1", "topic2", ...],
+  "preferredFrameworkNames": ["Framework Name 1", ...],
+  "voiceProfile": "5–10 bullet rules describing the author's writing patterns, tone, sentence length, structure. Concrete and actionable.",
+  "styleNotes": "1–2 sentence summary of the author's overall style and what makes it distinctive."
+}
+
+Rules:
+- contentAngles: 3–8 specific topics this author writes about (from their posts and profile — e.g. "B2B sales strategy", "founder lessons", "hiring culture")
+- preferredFrameworkNames: 1–3 framework names from the list above that best match how this author naturally structures posts
+- voiceProfile: bullet-style rules, under 200 words total, each rule concrete and directly applicable
+- styleNotes: plain sentence(s), no bullet points
+- If no posts are visible, derive topics from the profile bio, headline, and experience sections`,
+  });
+
+  const parsed = extractJson<LinkedinProfileAnalysis>(raw);
+  return {
+    contentAngles: Array.isArray(parsed.contentAngles) ? parsed.contentAngles : [],
+    preferredFrameworkNames: Array.isArray(parsed.preferredFrameworkNames) ? parsed.preferredFrameworkNames : [],
+    voiceProfile: parsed.voiceProfile ?? "",
+    styleNotes: parsed.styleNotes ?? "",
+  };
+}
+
 /* ---------- design brief ---------- */
 
 export type DesignBriefOutput = {

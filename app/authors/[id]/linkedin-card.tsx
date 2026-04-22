@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { timeAgo } from "@/lib/utils";
 import { toast } from "@/components/ui/toaster";
-import { analyzeLinkedinProfileAction, analyzeLinkedinPostsFromTextAction } from "@/lib/actions";
+import { scrapeLinkedinProfileAction, analyzeLinkedinPostsFromTextAction } from "@/lib/actions";
 
 export function LinkedInCard({
   authorId,
@@ -15,18 +15,20 @@ export function LinkedInCard({
   linkedinConnectedAt,
   linkedinLastSyncedAt,
   isConnected,
+  linkedinUrl,
 }: {
   authorId: number;
   linkedinMemberName: string | null;
   linkedinConnectedAt: Date | null;
   linkedinLastSyncedAt: Date | null;
   isConnected: boolean;
+  linkedinUrl: string | null;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [scraping, setScraping] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pastedText, setPastedText] = useState("");
   const [analyzingPaste, setAnalyzingPaste] = useState(false);
@@ -59,21 +61,22 @@ export function LinkedInCard({
     }
   }
 
-  async function handleAnalyze() {
-    setAnalyzing(true);
+  async function handleScrape() {
+    setScraping(true);
     try {
-      const result = await analyzeLinkedinProfileAction(authorId);
-      if (result.ok) {
-        toast({ title: result.message, kind: "success" });
-        router.refresh();
-      } else {
-        toast({ title: "API access limited", description: result.message, kind: "error" });
-        setPasteOpen(true);
-      }
+      const message = await scrapeLinkedinProfileAction(authorId);
+      toast({ title: message, kind: "success" });
+      router.refresh();
     } catch (e: any) {
-      toast({ title: "Analysis failed", description: e.message, kind: "error" });
+      const msg: string = e.message ?? "";
+      if (msg.includes("login") || msg.includes("accessed")) {
+        toast({ title: "Profile is private", description: "LinkedIn requires login to view this profile. Paste posts manually below.", kind: "error" });
+        setPasteOpen(true);
+      } else {
+        toast({ title: "Could not read LinkedIn profile", description: msg, kind: "error" });
+      }
     } finally {
-      setAnalyzing(false);
+      setScraping(false);
     }
   }
 
@@ -109,12 +112,25 @@ export function LinkedInCard({
     }
   }
 
-  const pasteSection = (
-    <div className="space-y-2 pt-1">
+  const analyzeSection = (
+    <div className="space-y-3 border-t border-border/50 pt-3 mt-1">
+      <div className="space-y-1">
+        <p className="text-xs font-medium">Auto-fill profile from LinkedIn</p>
+        <p className="text-xs text-muted-foreground">
+          Reads the LinkedIn profile to fill in content angles, preferred frameworks, and voice profile.
+        </p>
+      </div>
+      {linkedinUrl ? (
+        <Button size="sm" variant="secondary" onClick={handleScrape} disabled={scraping}>
+          {scraping ? "Reading LinkedIn…" : "Auto-fill from LinkedIn"}
+        </Button>
+      ) : (
+        <p className="text-xs text-amber-500">Add a LinkedIn URL in the profile header to enable this.</p>
+      )}
       {pasteOpen ? (
-        <>
+        <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            Paste your LinkedIn posts below (separate multiple posts with a blank line). Claude will analyze them to fill your content angles, frameworks, and voice profile.
+            Paste posts below (separate multiple posts with a blank line or <code>---</code>):
           </p>
           <Textarea
             value={pastedText}
@@ -131,13 +147,13 @@ export function LinkedInCard({
               Cancel
             </Button>
           </div>
-        </>
+        </div>
       ) : (
         <button
           onClick={() => setPasteOpen(true)}
-          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors"
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground transition-colors block"
         >
-          Paste posts manually instead
+          Or paste posts manually
         </button>
       )}
     </div>
@@ -163,26 +179,15 @@ export function LinkedInCard({
                 Last sync: {timeAgo(linkedinLastSyncedAt)}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              Syncs analytics for published posts that have a LinkedIn URL attached.
-            </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2">
               <Button size="sm" onClick={handleSync} disabled={syncing}>
                 {syncing ? "Syncing..." : "Sync analytics"}
               </Button>
-              <Button size="sm" variant="secondary" onClick={handleAnalyze} disabled={analyzing}>
-                {analyzing ? "Analyzing posts…" : "Analyze my posts"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleDisconnect}
-                disabled={disconnecting}
-              >
+              <Button size="sm" variant="outline" onClick={handleDisconnect} disabled={disconnecting}>
                 {disconnecting ? "..." : "Disconnect"}
               </Button>
             </div>
-            {pasteSection}
+            {analyzeSection}
           </div>
         ) : (
           <div className="space-y-3">
@@ -191,23 +196,17 @@ export function LinkedInCard({
             </p>
             <p className="text-xs text-muted-foreground">
               Requires LinkedIn app with <strong>r_member_social</strong> scope approved.{" "}
-              <a
-                href="/LINKEDIN_SETUP.md"
-                className="underline underline-offset-2"
-                target="_blank"
-              >
+              <a href="/LINKEDIN_SETUP.md" className="underline underline-offset-2" target="_blank">
                 Setup guide
               </a>
             </p>
             <Button
               size="sm"
-              onClick={() => {
-                window.location.href = `/api/linkedin/oauth/initiate?authorId=${authorId}`;
-              }}
+              onClick={() => { window.location.href = `/api/linkedin/oauth/initiate?authorId=${authorId}`; }}
             >
               Connect LinkedIn
             </Button>
-            {pasteSection}
+            {analyzeSection}
           </div>
         )}
       </CardContent>

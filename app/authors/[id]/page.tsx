@@ -79,6 +79,7 @@ export default async function AuthorDetailPage({ params }: { params: { id: strin
             linkedinConnectedAt={author.linkedinConnectedAt}
             linkedinLastSyncedAt={author.linkedinLastSyncedAt}
             isConnected={!!author.linkedinAccessToken}
+            linkedinUrl={author.linkedinUrl ?? null}
           />
         </Suspense>
       </div>

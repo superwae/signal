@@ -13,6 +13,7 @@ import {
   generateDesignBrief,
   reformatPostWithFramework,
   analyzeLinkedinPosts,
+  analyzeLinkedinPageContent,
 } from "@/lib/claude";
 
 /* ========== SIGNALS ========== */
@@ -707,12 +708,31 @@ export async function getDashboardStats() {
 
 /* ========== LINKEDIN PROFILE ANALYSIS ========== */
 
-async function applyLinkedinAnalysis(authorId: number, posts: string[]): Promise<{ postsFound: number; message: string }> {
+async function fetchLinkedinPageText(url: string): Promise<string | null> {
+  const normalized = url.startsWith("http") ? url : `https://${url}`;
+  // Jina Reader converts any page to clean LLM-readable text
+  const jinaUrl = `https://r.jina.ai/${normalized}`;
+  try {
+    const res = await fetch(jinaUrl, {
+      headers: { Accept: "text/plain", "X-No-Cache": "true" },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    // If Jina returned a LinkedIn login wall, bail out
+    if (text.includes("Sign in to LinkedIn") || text.includes("authwall") || text.length < 200) return null;
+    return text;
+  } catch {
+    return null;
+  }
+}
+
+async function applyAnalysis(
+  authorId: number,
+  analysis: { contentAngles: string[]; preferredFrameworkNames: string[]; voiceProfile: string; styleNotes: string }
+): Promise<string> {
   const [author] = await db.select().from(schema.authors).where(eq(schema.authors.id, authorId));
   if (!author) throw new Error("Author not found.");
-
-  const allFrameworks = await db.select({ name: schema.frameworks.name, description: schema.frameworks.description }).from(schema.frameworks);
-  const analysis = await analyzeLinkedinPosts(posts, allFrameworks);
 
   const allFwRows = await db.select().from(schema.frameworks);
   const preferredIds = analysis.preferredFrameworkNames
@@ -735,44 +755,45 @@ async function applyLinkedinAnalysis(authorId: number, posts: string[]): Promise
   if (patch.contentAngles) {
     await updateAuthorContentAnglesAction(authorId, analysis.contentAngles);
   }
-
   revalidatePath(`/authors/${authorId}`);
-  return { postsFound: posts.length, message: `Analyzed ${posts.length} posts and updated your profile.` };
+  return "Profile updated from LinkedIn — content angles, frameworks, voice, and style notes filled in.";
 }
 
-export async function analyzeLinkedinProfileAction(authorId: number): Promise<{
-  ok: boolean;
-  postsFound: number;
-  message: string;
-}> {
+export async function scrapeLinkedinProfileAction(authorId: number): Promise<string> {
   const [author] = await db.select().from(schema.authors).where(eq(schema.authors.id, authorId));
   if (!author) throw new Error("Author not found.");
-  if (!author.linkedinAccessToken || !author.linkedinMemberId) {
-    throw new Error("LinkedIn is not connected for this author.");
+  if (!author.linkedinUrl) throw new Error("No LinkedIn URL set for this author. Add it in the profile header first.");
+
+  const baseUrl = author.linkedinUrl.replace(/\/$/, "");
+  const activityUrl = `${baseUrl}/recent-activity/shares/`;
+
+  // Fetch profile page + recent posts page in parallel
+  const [profileText, activityText] = await Promise.all([
+    fetchLinkedinPageText(baseUrl),
+    fetchLinkedinPageText(activityUrl),
+  ]);
+
+  const combined = [profileText, activityText].filter(Boolean).join("\n\n---\n\n");
+  if (!combined || combined.length < 200) {
+    throw new Error("LinkedIn page could not be accessed — LinkedIn may require a login to view this profile. Try the paste option below.");
   }
 
-  const token = await getValidLinkedinToken(authorId);
-  const posts = await fetchLinkedinAuthoredPosts(token, author.linkedinMemberId);
-
-  if (!posts || posts.length === 0) {
-    return { ok: false, postsFound: 0, message: "No published posts found via API — try pasting your posts manually below." };
-  }
-
-  const result = await applyLinkedinAnalysis(authorId, posts);
-  return { ok: true, ...result };
+  const allFrameworks = await db.select({ name: schema.frameworks.name, description: schema.frameworks.description }).from(schema.frameworks);
+  const analysis = await analyzeLinkedinPageContent(combined, allFrameworks);
+  return applyAnalysis(authorId, analysis);
 }
 
 export async function analyzeLinkedinPostsFromTextAction(authorId: number, rawText: string): Promise<string> {
   if (!rawText || rawText.trim().length < 100) {
     throw new Error("Please paste at least a few posts (100+ characters).");
   }
-  // Split on 3+ newlines or explicit separators
   const posts = rawText
     .split(/\n{3,}|(?:\n|^)-{3,}(?:\n|$)/)
     .map((p) => p.trim())
     .filter((p) => p.length > 60);
 
   const chunks = posts.length > 0 ? posts : [rawText.trim()];
-  const result = await applyLinkedinAnalysis(authorId, chunks);
-  return result.message;
+  const allFrameworks = await db.select({ name: schema.frameworks.name, description: schema.frameworks.description }).from(schema.frameworks);
+  const analysis = await analyzeLinkedinPosts(chunks, allFrameworks);
+  return applyAnalysis(authorId, analysis);
 }
