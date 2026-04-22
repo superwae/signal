@@ -60,11 +60,15 @@ export function LinkedInCard({
   async function handleScrape() {
     setScraping(true);
     try {
-      const message = await scrapeLinkedinProfileAction(authorId);
-      toast({ title: message, kind: "success" });
-      router.refresh();
-    } catch (e: any) {
-      toast({ title: "Could not read LinkedIn profile", description: e.message, kind: "error" });
+      const result = await scrapeLinkedinProfileAction(authorId);
+      if (result.ok) {
+        toast({ title: result.message, kind: "success" });
+        router.refresh();
+      } else {
+        toast({ title: "Could not read LinkedIn profile", description: result.message, kind: "error" });
+      }
+    } catch {
+      toast({ title: "Could not read LinkedIn profile", kind: "error" });
     } finally {
       setScraping(false);
     }

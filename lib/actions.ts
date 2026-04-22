@@ -759,42 +759,48 @@ async function applyAnalysis(
   return "Profile updated from LinkedIn — content angles, frameworks, voice, and style notes filled in.";
 }
 
-export async function scrapeLinkedinProfileAction(authorId: number): Promise<string> {
-  let [author] = await db.select().from(schema.authors).where(eq(schema.authors.id, authorId));
-  if (!author) throw new Error("Author not found.");
+export async function scrapeLinkedinProfileAction(authorId: number): Promise<{ ok: boolean; message: string }> {
+  try {
+    let [author] = await db.select().from(schema.authors).where(eq(schema.authors.id, authorId));
+    if (!author) return { ok: false, message: "Author not found." };
 
-  // Auto-resolve URL from LinkedIn OAuth if not set yet
-  if (!author.linkedinUrl && author.linkedinAccessToken) {
-    try {
-      const token = await getValidLinkedinToken(authorId);
-      const vanityName = await fetchLinkedinVanityName(token);
-      if (vanityName) {
-        const linkedinUrl = `https://www.linkedin.com/in/${vanityName}`;
-        await db.update(schema.authors).set({ linkedinUrl }).where(eq(schema.authors.id, authorId));
-        author = { ...author, linkedinUrl };
-        revalidatePath(`/authors/${authorId}`);
-      }
-    } catch { /* proceed without URL */ }
+    // Auto-resolve URL from LinkedIn OAuth if not set yet
+    if (!author.linkedinUrl && author.linkedinAccessToken) {
+      try {
+        const token = await getValidLinkedinToken(authorId);
+        const vanityName = await fetchLinkedinVanityName(token);
+        if (vanityName) {
+          const linkedinUrl = `https://www.linkedin.com/in/${vanityName}`;
+          await db.update(schema.authors).set({ linkedinUrl }).where(eq(schema.authors.id, authorId));
+          author = { ...author, linkedinUrl };
+          revalidatePath(`/authors/${authorId}`);
+        }
+      } catch { /* proceed without URL */ }
+    }
+
+    if (!author.linkedinUrl) {
+      return { ok: false, message: "Could not resolve LinkedIn profile URL. Add it manually in the profile header." };
+    }
+
+    const baseUrl = author.linkedinUrl.replace(/\/$/, "");
+    const activityUrl = `${baseUrl}/recent-activity/shares/`;
+
+    const [profileText, activityText] = await Promise.all([
+      fetchLinkedinPageText(baseUrl),
+      fetchLinkedinPageText(activityUrl),
+    ]);
+
+    const combined = [profileText, activityText].filter(Boolean).join("\n\n---\n\n");
+    if (!combined || combined.length < 200) {
+      return { ok: false, message: "LinkedIn profile could not be read — it may be private or require a login." };
+    }
+
+    const allFrameworks = await db.select({ name: schema.frameworks.name, description: schema.frameworks.description }).from(schema.frameworks);
+    const analysis = await analyzeLinkedinPageContent(combined, allFrameworks);
+    const message = await applyAnalysis(authorId, analysis);
+    return { ok: true, message };
+  } catch (e: any) {
+    return { ok: false, message: e?.message ?? "Unexpected error reading LinkedIn profile." };
   }
-
-  if (!author.linkedinUrl) throw new Error("No LinkedIn URL found. Add it in the profile header.");
-
-  const baseUrl = author.linkedinUrl.replace(/\/$/, "");
-  const activityUrl = `${baseUrl}/recent-activity/shares/`;
-
-  // Fetch profile page + recent posts page in parallel
-  const [profileText, activityText] = await Promise.all([
-    fetchLinkedinPageText(baseUrl),
-    fetchLinkedinPageText(activityUrl),
-  ]);
-
-  const combined = [profileText, activityText].filter(Boolean).join("\n\n---\n\n");
-  if (!combined || combined.length < 200) {
-    throw new Error("LinkedIn page could not be accessed — the profile may be private or require a login.");
-  }
-
-  const allFrameworks = await db.select({ name: schema.frameworks.name, description: schema.frameworks.description }).from(schema.frameworks);
-  const analysis = await analyzeLinkedinPageContent(combined, allFrameworks);
-  return applyAnalysis(authorId, analysis);
 }
 
