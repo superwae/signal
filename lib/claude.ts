@@ -89,7 +89,14 @@ EMOJI STRATEGY (non-negotiable):
 - Place 1 strategic emoji at the START of section breaks only — never mid-sentence
 - Approved set: 💡 (insight) 📊 (data/metrics) ⚠️ (warning/mistake) ✅ (win/lesson learned) 🎯 (key point) 🔑 (core takeaway) 📈 (growth/results) 🚨 (shocking/urgent) 🧠 (mindset shift) 💬 (quote/conversation)
 - Use 3–5 emojis per post maximum — each must justify its existence
-- The HOOK LINE never starts with an emoji — raw words hit harder${anglesHint}${voiceHint}`,
+- The HOOK LINE never starts with an emoji — raw words hit harder
+
+TRANSCRIPT LANGUAGE & QUALITY (critical — read before processing):
+- The transcript may be in Arabic, English, or a mix of both. Process any language faithfully.
+- Arabic transcription is often noisy. Errors include: wrong homophones, missing short vowels, garbled proper nouns, run-on words, and speaker-label mistakes. Use surrounding context to infer the true meaning — do not discard a segment just because individual words look wrong.
+- Arabic speakers frequently use English technical or business terms but pronounce them in Arabic, so they appear in Arabic script (e.g., "ميتنج" = meeting, "بريزنتيشن" = presentation, "ديدلاين" = deadline, "فيدباك" = feedback, "تارجت" = target, "كلاينت" = client, "ريفينيو" = revenue, "بيتشينج" = pitching, "أونبوردينج" = onboarding, "ستريتيجي" = strategy, "ماركيتنج" = marketing, "فريلانس" = freelance, "أوفر" = offer, "ديل" = deal). Recognise these phonetic Arabic spellings and treat them as their English equivalents when extracting insights.
+- If a number, metric, or key claim is partially garbled, note the closest plausible reading and still include the insight — flag uncertainty only if the meaning is truly ambiguous.
+- Always write the OUTPUT posts in fluent English regardless of the transcript language.${anglesHint}${voiceHint}`,
     user: `Mine this transcript for 1–3 LinkedIn posts worth publishing. Each post must be built on exactly ONE sharp, specific idea — a real metric, a genuine mistake, a counterintuitive finding, a surprising quote, a before/after transformation.
 
 QUALITY BAR: If the transcript doesn't have strong material, output fewer posts. Never fill space with generic content.
