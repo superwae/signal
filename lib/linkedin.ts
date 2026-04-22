@@ -85,23 +85,57 @@ function extractVanityFromUrl(url: string): string | null {
   return m ? m[1] : null;
 }
 
-/** Last-resort: search DuckDuckGo via Jina Reader to find the LinkedIn vanity name from a member name. */
-async function resolveVanityViaSearch(memberName: string): Promise<string | null> {
-  const query = encodeURIComponent(`site:linkedin.com/in "${memberName}"`);
-  const jinaUrl = `https://r.jina.ai/https://duckduckgo.com/html/?q=${query}`;
+async function jinaGet(url: string): Promise<string | null> {
   try {
-    const res = await fetch(jinaUrl, {
-      headers: { Accept: "text/plain" },
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      headers: { Accept: "text/plain", "X-No-Cache": "true" },
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) return null;
     const text = await res.text();
-    const m = text.match(/linkedin\.com\/in\/([a-zA-Z0-9_%-]+)/);
-    if (!m) return null;
-    return decodeURIComponent(m[1]);
+    return text.length > 100 ? text : null;
   } catch {
     return null;
   }
+}
+
+function extractLinkedinVanity(text: string): string | null {
+  const m = text.match(/linkedin\.com\/in\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Resolve the LinkedIn vanity name for a member using three strategies:
+ * 1. Guess from name slug and verify the profile page loads (no auth wall)
+ * 2. Bing search via Jina Reader
+ * 3. Google search via Jina Reader
+ */
+async function resolveVanityViaSearch(memberName: string): Promise<string | null> {
+  // Strategy 1: try the slugified name directly against linkedin.com/in/
+  const slug = memberName
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  if (slug) {
+    const text = await jinaGet(`https://www.linkedin.com/in/${slug}`);
+    if (text && !text.includes("Sign in to LinkedIn") && !text.includes("authwall")) {
+      const firstName = memberName.split(/\s+/)[0].toLowerCase();
+      if (text.toLowerCase().includes(firstName)) return slug;
+    }
+  }
+
+  // Strategy 2: Bing search
+  const query = encodeURIComponent(`site:linkedin.com/in "${memberName}"`);
+  const bing = await jinaGet(`https://www.bing.com/search?q=${query}`);
+  if (bing) { const v = extractLinkedinVanity(bing); if (v) return v; }
+
+  // Strategy 3: Google search
+  const google = await jinaGet(`https://www.google.com/search?q=${query}`);
+  if (google) { const v = extractLinkedinVanity(google); if (v) return v; }
+
+  return null;
 }
 
 /**
