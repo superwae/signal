@@ -58,105 +58,87 @@ function extractJson<T>(raw: string): T {
 export type GeneratedSignal = {
   rawContent: string;
   recommendedAuthorRole?: string;
+  contentAngle?: string;
+  frameworkName?: string;
   sourceExcerpt?: string;
+};
+
+export type AuthorContext = {
+  role: string;
+  contentAngles: string[];
+  preferredFrameworkNames: string[];
+  voiceProfile?: string;
 };
 
 export async function generatePostsFromTranscript(
   transcript: string,
-  availableAuthorRoles: string[],
-  contentAngles?: string[],
-  voiceProfiles?: Record<string, string> // role → voice profile
+  authors: AuthorContext[],
 ): Promise<GeneratedSignal[]> {
-  const anglesHint = contentAngles?.length
-    ? `\nHigh-value content angles present in this team (use as creative inspiration): ${contentAngles.join(", ")}.`
-    : "";
-  const voiceHint = voiceProfiles && Object.keys(voiceProfiles).length
-    ? `\n\nVoice profiles — match these precisely when writing for that role:\n${Object.entries(voiceProfiles).map(([role, profile]) => `${role}:\n${profile}`).join("\n\n")}`
-    : "";
+  const authorBlock = authors
+    .filter((a) => a.contentAngles.length > 0)
+    .map((a) => {
+      const angles = a.contentAngles.join(", ");
+      const frameworks = a.preferredFrameworkNames.length
+        ? `Preferred frameworks: ${a.preferredFrameworkNames.join(", ")}.`
+        : "";
+      const voice = a.voiceProfile
+        ? `Voice profile:\n${a.voiceProfile}`
+        : "";
+      return `AUTHOR: ${a.role}\nContent angles: ${angles}\n${frameworks}\n${voice}`.trim();
+    })
+    .join("\n\n---\n\n");
+
+  const fallbackRoles = authors.map((a) => a.role).filter(Boolean);
 
   const raw = await textCall({
     maxTokens: 5000,
     temperature: 0.85,
-    system: `You are a LinkedIn ghostwriter who writes in a specific, well-defined voice: personal, honest, and reflective. Not trying to inspire — trying to be understood.
-
-The author's style (follow this precisely):
-- Opens with a question someone often asks her, a personal confession, or a specific moment — never a corporate claim or shocking stat
-- Answers honestly and briefly first, then unpacks the story behind it
-- Uses everyday metaphors and real language ("golden handcuffs", "brain fully switched on", "in flow") — not business jargon
-- Flows in prose, not bullet points — 2–3 sentences per paragraph, natural rhythm
-- The insight lands quietly, not with a hammer — it's the thing that makes a reader pause and nod
-- Closes with a specific question directed at a named audience ("Fellow founders who made the leap…") — never generic engagement bait
-- Emojis: 1–3 per post, placed at the start of a paragraph break or insight moment — never mid-sentence, never as decoration. The hook line never starts with an emoji.
-- Hashtags: 2–4, relevant, at the very end
+    system: `${GLOBAL_RULES}
 
 TRANSCRIPT LANGUAGE & QUALITY (critical — read before processing):
 - The transcript may be in Arabic, English, or a mix of both. Process any language faithfully.
 - Arabic transcription is often noisy. Errors include: wrong homophones, missing short vowels, garbled proper nouns, run-on words, and speaker-label mistakes. Use surrounding context to infer the true meaning — do not discard a segment just because individual words look wrong.
 - Arabic speakers frequently use English technical or business terms but pronounce them in Arabic, so they appear in Arabic script (e.g., "ميتنج" = meeting, "بريزنتيشن" = presentation, "ديدلاين" = deadline, "فيدباك" = feedback, "تارجت" = target, "كلاينت" = client, "ريفينيو" = revenue, "بيتشينج" = pitching, "أونبوردينج" = onboarding, "ستريتيجي" = strategy, "ماركيتنج" = marketing, "فريلانس" = freelance, "أوفر" = offer, "ديل" = deal). Recognise these phonetic Arabic spellings and treat them as their English equivalents when extracting insights.
 - If a number, metric, or key claim is partially garbled, note the closest plausible reading and still include the insight — flag uncertainty only if the meaning is truly ambiguous.
-- Always write the OUTPUT posts in fluent English regardless of the transcript language.${anglesHint}${voiceHint}`,
-    user: `Mine this transcript for 1–3 LinkedIn posts worth publishing. Each post must be built on exactly ONE sharp, specific idea — a real moment, a genuine decision, a counterintuitive lesson, a surprising outcome, a before/after shift.
+- Always write the OUTPUT posts in fluent English regardless of the transcript language.`,
+    user: `You have a meeting transcript and a team of authors, each with specific content angles they write about.
 
-QUALITY BAR: If the transcript doesn't have strong material, output fewer posts. Never fill space with generic content.
+Read the full transcript, then extract the best 1–5 LinkedIn post ideas. For each idea:
+1. Pick the author whose content angles best match the insight
+2. Identify which specific content angle it maps to
+3. Recommend the best framework for that author
+4. Write a post draft in that author's voice
 
-Each post flows like this (not a rigid template — a natural shape):
+QUALITY BAR: Only extract ideas with sharp, specific, real moments — a genuine decision, a counterintuitive lesson, a surprising outcome, a concrete before/after. If the transcript has weak material, output fewer posts. Never fill space with generic content.
 
-OPENING — pull the reader into a human moment:
-  • A question the author gets asked, a confession, or a specific real moment
-  • Conversational, not corporate. First-person or a quote from someone else directed at them.
-  • Short — one or two lines maximum.
+POST STRUCTURE (natural shape, not a rigid template):
+- Opening: pull the reader in with a human moment, question, or confession — short, conversational, never corporate
+- Honest answer: direct, before the story
+- The story: what happened, what changed — specific details from the transcript
+- The insight: the non-obvious thing, quiet not preachy
+- Closing: one specific question to a named audience — never "What do you think?"
+- 2–4 relevant hashtags at the end
+- 180–320 words, flowing prose, no bullet points or markdown
 
-HONEST ANSWER — brief, direct:
-  • Give the real answer first, before the story. Acknowledge complexity if it exists.
+AUTHORS AND THEIR CONTENT ANGLES:
+${authorBlock || `Any role from: ${fallbackRoles.join(", ")}`}
 
-THE STORY — context and turning point:
-  • What happened, what they thought, what changed. Specific and grounded.
-  • Use real details from the transcript — a number, a name, a decision, a moment.
-  • This is where the reader earns the insight.
-
-THE INSIGHT — quiet and clear:
-  • The non-obvious thing. The thing that changed how they see something.
-  • Not preachy. Not a life lesson. Just honest.
-
-CLOSING — specific question to a named audience:
-  • One sentence. Directed at a specific group ("Fellow founders…", "Anyone who's been through a pivot…")
-  • NEVER: "What do you think?" / "Drop a comment" / "Let me know your thoughts"
-
-#2to4 #relevant #hashtags
-
-FORMATTING:
-- Flowing prose, not bullet points or headers
-- 2–3 sentences per paragraph, blank line between each block
-- Total post: 180–320 words
-- No markdown, no bold, no emojis as section markers
-- Reads like a person wrote it — honest, direct, a little vulnerable
-
-${availableAuthorRoles.length ? `Output format — use exactly this structure:
+Output format — use exactly this structure for each post:
 POST 1:
-[full post text following the structure above]
-RECOMMENDED_FOR: [role from: ${availableAuthorRoles.join(", ")}]
-SOURCE_QUOTE: [verbatim 1-2 sentences from the transcript that directly inspired this post]
+[full post text]
+RECOMMENDED_FOR: [author role]
+CONTENT_ANGLE: [the specific content angle from that author's list that this post matches]
+FRAMEWORK: [recommended framework name, or leave blank if none applies]
+SOURCE_QUOTE: [verbatim 1–2 sentences from the transcript that inspired this post]
 
 POST 2:
 [full post text]
-RECOMMENDED_FOR: [role]
+RECOMMENDED_FOR: [author role]
+CONTENT_ANGLE: [content angle]
+FRAMEWORK: [framework name or blank]
 SOURCE_QUOTE: [verbatim quote]
 
-POST 3:
-[full post text]
-RECOMMENDED_FOR: [role]
-SOURCE_QUOTE: [verbatim quote]
-
-(Only include posts that clear the quality bar. Omit POST 2 or POST 3 if the transcript doesn't have enough strong material.)` : `Output format — use exactly this structure:
-POST 1:
-[full post text following the structure above]
-SOURCE_QUOTE: [verbatim 1-2 sentences from the transcript that directly inspired this post]
-
-POST 2:
-[full post text]
-SOURCE_QUOTE: [verbatim quote]
-
-(Only include posts that clear the quality bar.)`}
+(Continue for up to 5 posts. Omit any post that doesn't clear the quality bar.)
 
 -------------------------------------
 TRANSCRIPT:
@@ -168,17 +150,23 @@ ${transcript.slice(0, 40000)}
   return parts
     .map((part) => {
       const lines = part.trim().split("\n");
-      const recIdx = lines.findIndex((l) => /^RECOMMENDED_FOR:/i.test(l.trim()));
-      const quoteIdx = lines.findIndex((l) => /^SOURCE_QUOTE:/i.test(l.trim()));
-      const recommendedAuthorRole =
-        recIdx !== -1 ? lines[recIdx].replace(/^RECOMMENDED_FOR:\s*/i, "").trim() : undefined;
-      const sourceExcerpt =
-        quoteIdx !== -1 ? lines[quoteIdx].replace(/^SOURCE_QUOTE:\s*/i, "").trim() : undefined;
-      const content = lines
-        .filter((_, i) => i !== recIdx && i !== quoteIdx)
-        .join("\n")
-        .trim();
-      return { rawContent: content, recommendedAuthorRole, sourceExcerpt };
+      const pick = (prefix: RegExp) => {
+        const idx = lines.findIndex((l) => prefix.test(l.trim()));
+        return idx !== -1 ? { value: lines[idx].replace(prefix, "").trim(), idx } : { value: undefined, idx: -1 };
+      };
+      const rec = pick(/^RECOMMENDED_FOR:\s*/i);
+      const angle = pick(/^CONTENT_ANGLE:\s*/i);
+      const framework = pick(/^FRAMEWORK:\s*/i);
+      const quote = pick(/^SOURCE_QUOTE:\s*/i);
+      const skipIdxs = new Set([rec.idx, angle.idx, framework.idx, quote.idx].filter((i) => i !== -1));
+      const content = lines.filter((_, i) => !skipIdxs.has(i)).join("\n").trim();
+      return {
+        rawContent: content,
+        recommendedAuthorRole: rec.value,
+        contentAngle: angle.value,
+        frameworkName: framework.value || undefined,
+        sourceExcerpt: quote.value,
+      };
     })
     .filter((p) => p.rawContent.length > 80);
 }

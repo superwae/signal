@@ -40,34 +40,46 @@ export async function POST(
     (m) => m.id && !existingIds.has(m.id) && m.transcript.length >= 100
   );
 
-  const authors = await db.select().from(schema.authors).where(eq(schema.authors.active, true));
-  const roles = authors.map((a) => a.role ?? "").filter(Boolean);
-  const allAngles = authors.flatMap((a) => (a.contentAngles as string[] | null) ?? []);
-  const voiceProfiles = Object.fromEntries(
-    authors.filter((a) => a.role && a.voiceProfile).map((a) => [a.role!, a.voiceProfile!])
-  );
+  const [authors, allFrameworks] = await Promise.all([
+    db.select().from(schema.authors).where(eq(schema.authors.active, true)),
+    db.select().from(schema.frameworks),
+  ]);
+  const authorContexts = authors.map((a) => ({
+    role: a.role ?? "",
+    contentAngles: (a.contentAngles as string[] | null) ?? [],
+    preferredFrameworkNames: (a.preferredFrameworks as number[] | null ?? [])
+      .map((fid) => allFrameworks.find((f) => f.id === fid)?.name)
+      .filter((n): n is string => Boolean(n)),
+    voiceProfile: a.voiceProfile ?? undefined,
+  }));
 
   let totalInserted = 0;
 
   for (const meeting of newMeetings) {
     try {
-      const generated = await generatePostsFromTranscript(meeting.transcript, roles, allAngles, voiceProfiles);
+      const generated = await generatePostsFromTranscript(meeting.transcript, authorContexts);
       if (!generated.length) continue;
 
-      const recAuthorMatch = (role?: string) =>
-        role ? authors.find((a) => a.role?.toLowerCase() === role.toLowerCase()) : undefined;
-
-      const rows = generated.map((s) => ({
-        rawContent: s.rawContent,
-        contentType: "post",
-        speaker: null as string | null,
-        contentAngles: [] as string[],
-        recommendedAuthorId: recAuthorMatch(s.recommendedAuthorRole)?.id ?? authorId,
-        source: "fathom" as const,
-        sourceMeetingId: meeting.id,
-        sourceMeetingTitle: meeting.title,
-        sourceMeetingDate: meeting.date ? new Date(meeting.date) : null,
-      }));
+      const rows = generated.map((s) => {
+        const recAuthor = s.recommendedAuthorRole
+          ? authors.find((a) => a.role?.toLowerCase() === s.recommendedAuthorRole?.toLowerCase())
+          : undefined;
+        const recFramework = s.frameworkName
+          ? allFrameworks.find((f) => f.name.toLowerCase() === s.frameworkName!.toLowerCase())
+          : undefined;
+        return {
+          rawContent: s.rawContent,
+          contentType: "post",
+          speaker: null as string | null,
+          contentAngles: s.contentAngle ? [s.contentAngle] : [] as string[],
+          recommendedAuthorId: recAuthor?.id ?? authorId,
+          bestFrameworkId: recFramework?.id ?? null,
+          source: "fathom" as const,
+          sourceMeetingId: meeting.id,
+          sourceMeetingTitle: meeting.title,
+          sourceMeetingDate: meeting.date ? new Date(meeting.date) : null,
+        };
+      });
 
       const inserted = await db.insert(schema.signals).values(rows).returning();
       totalInserted += inserted.length;

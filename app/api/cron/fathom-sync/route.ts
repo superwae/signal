@@ -18,12 +18,18 @@ export async function GET(req: NextRequest) {
     .from(schema.authors)
     .where(isNotNull(schema.authors.fathomAccessToken));
 
-  const allAuthors = await db.select().from(schema.authors).where(eq(schema.authors.active, true));
-  const roles = allAuthors.map((a) => a.role ?? "").filter(Boolean);
-  const allAngles = allAuthors.flatMap((a) => (a.contentAngles as string[] | null) ?? []);
-  const voiceProfiles = Object.fromEntries(
-    allAuthors.filter((a) => a.role && a.voiceProfile).map((a) => [a.role!, a.voiceProfile!])
-  );
+  const [allAuthors, allFrameworks] = await Promise.all([
+    db.select().from(schema.authors).where(eq(schema.authors.active, true)),
+    db.select().from(schema.frameworks),
+  ]);
+  const authorContexts = allAuthors.map((a) => ({
+    role: a.role ?? "",
+    contentAngles: (a.contentAngles as string[] | null) ?? [],
+    preferredFrameworkNames: (a.preferredFrameworks as number[] | null ?? [])
+      .map((fid) => allFrameworks.find((f) => f.id === fid)?.name)
+      .filter((n): n is string => Boolean(n)),
+    voiceProfile: a.voiceProfile ?? undefined,
+  }));
 
   const results: { authorId: number; synced: number; error?: string }[] = [];
 
@@ -48,22 +54,28 @@ export async function GET(req: NextRequest) {
       let synced = 0;
       for (const meeting of newMeetings) {
         try {
-          const generated = await generatePostsFromTranscript(meeting.transcript, roles, allAngles, voiceProfiles);
+          const generated = await generatePostsFromTranscript(meeting.transcript, authorContexts);
           if (!generated.length) continue;
-          const rows = generated.map((s) => ({
-            rawContent: s.rawContent,
-            contentType: "post",
-            speaker: null as string | null,
-            contentAngles: [] as string[],
-            recommendedAuthorId:
-              s.recommendedAuthorRole
-                ? allAuthors.find((a) => a.role?.toLowerCase() === s.recommendedAuthorRole?.toLowerCase())?.id ?? author.id
-                : author.id,
-            source: "fathom" as const,
-            sourceMeetingId: meeting.id,
-            sourceMeetingTitle: meeting.title,
-            sourceMeetingDate: meeting.date ? new Date(meeting.date) : null,
-          }));
+          const rows = generated.map((s) => {
+            const recAuthor = s.recommendedAuthorRole
+              ? allAuthors.find((a) => a.role?.toLowerCase() === s.recommendedAuthorRole?.toLowerCase())
+              : undefined;
+            const recFramework = s.frameworkName
+              ? allFrameworks.find((f) => f.name.toLowerCase() === s.frameworkName!.toLowerCase())
+              : undefined;
+            return {
+              rawContent: s.rawContent,
+              contentType: "post",
+              speaker: null as string | null,
+              contentAngles: s.contentAngle ? [s.contentAngle] : [] as string[],
+              recommendedAuthorId: recAuthor?.id ?? author.id,
+              bestFrameworkId: recFramework?.id ?? null,
+              source: "fathom" as const,
+              sourceMeetingId: meeting.id,
+              sourceMeetingTitle: meeting.title,
+              sourceMeetingDate: meeting.date ? new Date(meeting.date) : null,
+            };
+          });
           const inserted = await db.insert(schema.signals).values(rows).returning();
           synced += inserted.length;
         } catch {

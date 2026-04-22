@@ -26,13 +26,21 @@ export async function extractSignalsAction(
   if (!transcript || transcript.length < 100) {
     throw new Error("Transcript is too short — paste more context.");
   }
-  const authors = await db.select().from(schema.authors).where(eq(schema.authors.active, true));
-  const roles = authors.map((a) => a.role ?? "").filter(Boolean);
-  const allAngles = authors.flatMap((a) => (a.contentAngles as string[] | null) ?? []);
-  const voiceProfiles = Object.fromEntries(
-    authors.filter((a) => a.role && a.voiceProfile).map((a) => [a.role!, a.voiceProfile!])
-  );
-  const generated = await generatePostsFromTranscript(transcript, roles, allAngles, voiceProfiles);
+  const [authors, frameworks] = await Promise.all([
+    db.select().from(schema.authors).where(eq(schema.authors.active, true)),
+    db.select().from(schema.frameworks),
+  ]);
+
+  const authorContexts = authors.map((a) => ({
+    role: a.role ?? "",
+    contentAngles: (a.contentAngles as string[] | null) ?? [],
+    preferredFrameworkNames: (a.preferredFrameworks as number[] | null ?? [])
+      .map((fid) => frameworks.find((f) => f.id === fid)?.name)
+      .filter((n): n is string => Boolean(n)),
+    voiceProfile: a.voiceProfile ?? undefined,
+  }));
+
+  const generated = await generatePostsFromTranscript(transcript, authorContexts);
   if (!generated.length) return { inserted: 0, signals: [] };
 
   // Store the raw transcript once, link all extracted signals to it
@@ -47,12 +55,16 @@ export async function extractSignalsAction(
     const recAuthor = s.recommendedAuthorRole
       ? authors.find((a) => a.role?.toLowerCase() === s.recommendedAuthorRole?.toLowerCase())
       : undefined;
+    const recFramework = s.frameworkName
+      ? frameworks.find((f) => f.name.toLowerCase() === s.frameworkName!.toLowerCase())
+      : undefined;
     return {
       rawContent: s.rawContent,
       contentType: "post",
       speaker: null as string | null,
-      contentAngles: [] as string[],
+      contentAngles: s.contentAngle ? [s.contentAngle] : ([] as string[]),
       recommendedAuthorId: recAuthor?.id ?? null,
+      bestFrameworkId: recFramework?.id ?? null,
       source: "manual" as const,
       sourceMeetingTitle: meetingTitle ?? null,
       sourceMeetingDate: meetingDate ? new Date(meetingDate) : null,
@@ -62,17 +74,17 @@ export async function extractSignalsAction(
   });
   const inserted = await db.insert(schema.signals).values(rows).returning();
 
-  // Auto-score and auto-star best framework for each signal in parallel
-  const frameworks = await db.select().from(schema.frameworks);
+  // Auto-score each signal and fill framework fallback if Claude didn't pick one
   await Promise.all(
     inserted.map(async (signal) => {
-      const bestFw =
-        frameworks.find((f) => (f.bestFor as string[] | null ?? []).includes(signal.contentType)) ??
-        frameworks[0] ??
-        null;
       const scores = await scorePost(signal.rawContent).catch(() => null);
       const patch: Record<string, unknown> = {};
-      if (bestFw) patch.bestFrameworkId = bestFw.id;
+      if (!signal.bestFrameworkId) {
+        const fallbackFw =
+          frameworks.find((f) => (f.bestFor as string[] | null ?? []).includes(signal.contentType)) ??
+          frameworks[0] ?? null;
+        if (fallbackFw) patch.bestFrameworkId = fallbackFw.id;
+      }
       if (scores) {
         patch.hookStrengthScore = scores.hookStrength;
         patch.specificityScore = scores.specificity;
