@@ -5,7 +5,7 @@ import { eq, desc, inArray, sql } from "drizzle-orm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/utils";
-import { ArrowLeft, Radio, ArrowUpRight } from "lucide-react";
+import { ArrowLeft, Radio, ArrowUpRight, Check } from "lucide-react";
 import { PostEditor } from "./post-editor";
 import { AuthorCard, SignalAnglesCard, TranscriptCard, SignalStatsPanel, SourceExcerptCard } from "./sidebar-cards";
 import { SendToReviewButton } from "./send-to-review-button";
@@ -217,9 +217,13 @@ export default async function SignalDetailPage({ params }: { params: { id: strin
                       </div>
                       <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </Link>
-                    {(p.status === "draft" || p.status === "rejected") && (
+                    {p.status === "in_review" ? (
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                        <Check className="h-3 w-3" /> Sent to user
+                      </span>
+                    ) : (p.status === "draft" || p.status === "rejected") ? (
                       <SendToReviewButton postId={p.id} />
-                    )}
+                    ) : null}
                   </div>
                 ))}
               </div>
