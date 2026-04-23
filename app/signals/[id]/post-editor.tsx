@@ -11,9 +11,10 @@ import {
   scoreSignalAction,
   generatePostAction,
   updatePostContentAction,
+  submitForReviewAction,
 } from "@/lib/actions";
 import { toast } from "@/components/ui/toaster";
-import { Edit2, Check, X, Copy, Trash2, Sparkles, Loader2, Star, ArrowUpRight, ArrowLeft } from "lucide-react";
+import { Edit2, Check, X, Copy, Trash2, Sparkles, Loader2, Star, ArrowUpRight, ArrowLeft, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -62,6 +63,8 @@ export function PostEditor({
   const [generatedPost, setGeneratedPost] = useState<{ id: number; content: string } | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState("");
   const [savingPost, setSavingPost] = useState(false);
+  const [sendingReview, setSendingReview] = useState(false);
+  const [sentToReview, setSentToReview] = useState(false);
 
   const mode: "signal" | "generated" = generatedPost ? "generated" : "signal";
 
@@ -147,6 +150,25 @@ export function PostEditor({
       toast({ title: "Generation failed", description: e?.message, kind: "error" });
     } finally {
       setGenerating(false);
+    }
+  }
+
+  // ── send to review ──
+  async function sendToReview() {
+    if (!generatedPost) return;
+    setSendingReview(true);
+    try {
+      if (generatedDraft !== generatedPost.content) {
+        await updatePostContentAction(generatedPost.id, generatedDraft);
+        setGeneratedPost((p) => p ? { ...p, content: generatedDraft } : p);
+      }
+      await submitForReviewAction(generatedPost.id);
+      setSentToReview(true);
+      toast({ title: "Sent to review ✓", kind: "success" });
+    } catch (e: any) {
+      toast({ title: "Failed to send", description: e.message, kind: "error" });
+    } finally {
+      setSendingReview(false);
     }
   }
 
@@ -255,12 +277,30 @@ export function PostEditor({
               Copy
             </Button>
             {mode === "generated" && generatedPost ? (
-              <Link href={`/posts/${generatedPost.id}`}>
-                <Button size="sm" variant="outline" className="text-xs">
-                  View post
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
+              <div className="flex gap-2">
+                {!sentToReview ? (
+                  <Button
+                    size="sm"
+                    onClick={sendToReview}
+                    disabled={sendingReview}
+                  >
+                    {sendingReview
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Send className="h-3.5 w-3.5" />}
+                    {sendingReview ? "Sending…" : "Send to review"}
+                  </Button>
+                ) : (
+                  <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <Check className="h-3 w-3" /> In review
+                  </span>
+                )}
+                <Link href={`/posts/${generatedPost.id}`}>
+                  <Button size="sm" variant="outline" className="text-xs">
+                    View post
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              </div>
             ) : (
               <Button size="sm" variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={archive}>
                 <Trash2 className="h-3.5 w-3.5" />
