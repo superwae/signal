@@ -6,7 +6,7 @@ import { desc, ne, eq, and, ilike, gte, lte, sql, inArray } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
-import { Plus, User, Archive, Radio, ArrowUpRight, FileText } from "lucide-react";
+import { Plus, Linkedin, Archive, Radio, ArrowUpRight, FileText } from "lucide-react";
 import { SignalFilterBar } from "./filter-bar";
 import { getCurrentUser } from "@/lib/session";
 import { SendSignalButton } from "./send-signal-button";
@@ -198,7 +198,7 @@ export default async function SignalsPage({
                           </Badge>
                           {authorName && (
                             <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
+                              <Linkedin className="h-3 w-3" />
                               {authorName}
                             </span>
                           )}

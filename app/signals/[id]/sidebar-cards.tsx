@@ -11,7 +11,7 @@ import {
   scoreSignalAction,
 } from "@/lib/actions";
 import { toast } from "@/components/ui/toaster";
-import { User, Tag, FileText, BarChart2, ChevronDown, ChevronUp, Check, X, Plus, Star, Loader2, Zap } from "lucide-react";
+import { Linkedin, Tag, FileText, BarChart2, ChevronDown, ChevronUp, Check, X, Plus, Star, Loader2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScores } from "./scores-provider";
 
@@ -55,8 +55,8 @@ export function AuthorCard({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-1.5">
-          <User className="h-3.5 w-3.5 text-cyan-500" />
-          Author
+          <Linkedin className="h-3.5 w-3.5 text-cyan-500" />
+          LinkedIn poster
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
