@@ -80,7 +80,7 @@ export async function fetchGoogleMeetTranscripts(
     `mimeType = 'application/vnd.google-apps.document' and name contains 'Transcript' and trashed = false`
   );
   const fields = encodeURIComponent("files(id,name,createdTime)");
-  const listUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=createdTime+desc&pageSize=${limit}`;
+  const listUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&fields=${fields}&orderBy=createdTime+desc&pageSize=${limit}&includeItemsFromAllDrives=true&supportsAllDrives=true&corpora=allDrives`;
 
   const listRes = await fetch(listUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -92,7 +92,7 @@ export async function fetchGoogleMeetTranscripts(
   const results = await Promise.all(
     files.map(async (file) => {
       const exportRes = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=text/plain`,
+        `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=text/plain&supportsAllDrives=true`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const transcript = exportRes.ok ? await exportRes.text() : "";
