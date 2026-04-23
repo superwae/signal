@@ -35,7 +35,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
   const activeTab: TabKey = (searchParams.tab as TabKey) ?? "drafts";
   const tab = tabs.find((t) => t.key === activeTab) ?? tabs[0];
 
-  const statusCondition = sql`${schema.posts.status} = ANY(ARRAY[${sql.join(tab.statuses.map(s => sql`${s}`), sql`, `)}]::text[])`;
+  const statusCondition = inArray(schema.posts.status, tab.statuses as any[]);
   const authorCondition = scopedAuthorId ? eq(schema.posts.authorId, scopedAuthorId) : undefined;
 
   const posts = await db
