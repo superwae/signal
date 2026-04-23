@@ -287,11 +287,11 @@ export function PostEditor({
                     {sendingReview
                       ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       : <Send className="h-3.5 w-3.5" />}
-                    {sendingReview ? "Sending…" : "Send to review"}
+                    {sendingReview ? "Sending…" : "Send to user"}
                   </Button>
                 ) : (
                   <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                    <Check className="h-3 w-3" /> In review
+                    <Check className="h-3 w-3" /> Sent to user
                   </span>
                 )}
                 <Link href={`/posts/${generatedPost.id}`}>

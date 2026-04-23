@@ -10,21 +10,30 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-const TABS = [
-  { key: "drafts",   label: "In review", statuses: ["draft", "in_review"] as const, icon: FileEdit,      color: "text-blue-500"   },
-  { key: "accepted", label: "Accepted",  statuses: ["approved", "published"] as const, icon: CheckCircle2, color: "text-emerald-500" },
-  { key: "rejected", label: "Rejected",  statuses: ["rejected"] as const,             icon: XCircle,      color: "text-red-500"    },
-] as const;
+type TabDef = { key: string; label: string; statuses: string[]; icon: any; color: string };
+type TabKey = "drafts" | "accepted" | "rejected";
 
-type TabKey = typeof TABS[number]["key"];
+// Admins see draft (their working copies) + in_review; regular users only see in_review (sent to them)
+const ADMIN_TABS: TabDef[] = [
+  { key: "drafts",   label: "In review", statuses: ["draft", "in_review"], icon: FileEdit,      color: "text-blue-500"   },
+  { key: "accepted", label: "Accepted",  statuses: ["approved", "published"], icon: CheckCircle2, color: "text-emerald-500" },
+  { key: "rejected", label: "Rejected",  statuses: ["rejected"],             icon: XCircle,      color: "text-red-500"    },
+];
+
+const USER_TABS: TabDef[] = [
+  { key: "drafts",   label: "In review", statuses: ["in_review"],           icon: FileEdit,      color: "text-blue-500"   },
+  { key: "accepted", label: "Accepted",  statuses: ["approved", "published"], icon: CheckCircle2, color: "text-emerald-500" },
+  { key: "rejected", label: "Rejected",  statuses: ["rejected"],             icon: XCircle,      color: "text-red-500"    },
+];
 
 export default async function DraftsPage({ searchParams }: { searchParams: { tab?: string } }) {
   const session = await getCurrentUser();
   const isRegularUser = !session?.isAdmin && !session?.isSuperAdmin;
   const scopedAuthorId = isRegularUser ? (session?.authorId ?? null) : null;
 
+  const tabs = isRegularUser ? USER_TABS : ADMIN_TABS;
   const activeTab: TabKey = (searchParams.tab as TabKey) ?? "drafts";
-  const tab = TABS.find((t) => t.key === activeTab) ?? TABS[0];
+  const tab = tabs.find((t) => t.key === activeTab) ?? tabs[0];
 
   const statusCondition = sql`${schema.posts.status} = ANY(ARRAY[${sql.join(tab.statuses.map(s => sql`${s}`), sql`, `)}]::text[])`;
   const authorCondition = scopedAuthorId ? eq(schema.posts.authorId, scopedAuthorId) : undefined;
@@ -69,7 +78,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
     countByStatus[row.status] = row.count;
   }
 
-  function tabCount(t: typeof TABS[number]) {
+  function tabCount(t: TabDef) {
     return t.statuses.reduce((sum, s) => sum + (countByStatus[s] ?? 0), 0);
   }
 
@@ -90,7 +99,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 rounded-xl bg-muted p-1 w-fit">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const Icon = t.icon;
           const isActive = t.key === activeTab;
           const count = tabCount(t);
