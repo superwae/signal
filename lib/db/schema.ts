@@ -216,6 +216,18 @@ export const users = pgTable("users", {
   emailIdx: uniqueIndex("users_email_idx").on(t.email),
 }));
 
+/** One active login session per account. */
+export const sessions = pgTable("sessions", {
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 256 }).notNull(),
+  token: varchar("token", { length: 128 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => ({
+  tokenIdx: uniqueIndex("sessions_token_idx").on(t.token),
+  emailIdx: index("sessions_email_idx").on(t.email),
+}));
+
 /** Magic-link auth: tokens issued to allowed emails. */
 export const authTokens = pgTable("auth_tokens", {
   id: serial("id").primaryKey(),
@@ -251,3 +263,4 @@ export type DesignBrief = typeof designBriefs.$inferSelect;
 export type ContentAngle = typeof contentAngles.$inferSelect;
 export type AuthorContentAngle = typeof authorContentAngles.$inferSelect;
 export type User = typeof users.$inferSelect;
+export type Session = typeof sessions.$inferSelect;

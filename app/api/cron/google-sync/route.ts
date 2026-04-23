@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, schema } from "@/lib/db";
-import { isNotNull, eq, inArray } from "drizzle-orm";
+import { isNotNull, eq, inArray, and } from "drizzle-orm";
 import { getValidGoogleToken, fetchGoogleMeetTranscripts } from "@/lib/google";
 import { generatePostsFromTranscript } from "@/lib/claude";
 import { revalidatePath } from "next/cache";
@@ -40,24 +40,33 @@ export async function GET(req: NextRequest) {
       if (!meetings.length) return { authorId: author.id, synced: 0 };
 
       const fileIds = meetings.map((m) => m.id);
-      const existingTranscripts = fileIds.length
-        ? await db.select({ sourceMeetingId: schema.transcripts.sourceMeetingId })
-            .from(schema.transcripts)
-            .where(inArray(schema.transcripts.sourceMeetingId, fileIds))
+      const existingSignals = fileIds.length
+        ? await db.select({ sourceMeetingId: schema.signals.sourceMeetingId })
+            .from(schema.signals)
+            .where(and(
+              inArray(schema.signals.sourceMeetingId, fileIds),
+              eq(schema.signals.recommendedAuthorId, author.id),
+            ))
         : [];
-      const existingIds = new Set(existingTranscripts.map((t) => t.sourceMeetingId));
+      const existingIds = new Set(existingSignals.map((s) => s.sourceMeetingId));
       const newMeetings = meetings.filter((m) => !existingIds.has(m.id));
 
       let synced = 0;
       for (const meeting of newMeetings) {
         try {
-          const [transcriptRow] = await db.insert(schema.transcripts).values({
+          const existingTranscript = await db.select()
+            .from(schema.transcripts)
+            .where(eq(schema.transcripts.sourceMeetingId, meeting.id))
+            .limit(1)
+            .then((r) => r[0] ?? null);
+
+          const transcriptRow = existingTranscript ?? (await db.insert(schema.transcripts).values({
             title: meeting.title,
             content: meeting.transcript,
             source: "google_meet",
             sourceMeetingId: meeting.id,
             sourceMeetingDate: meeting.date ? new Date(meeting.date) : null,
-          }).returning();
+          }).returning().then((r) => r[0]));
 
           const generated = await generatePostsFromTranscript(meeting.transcript, authorContexts);
           if (!generated.length) continue;

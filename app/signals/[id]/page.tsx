@@ -210,7 +210,7 @@ export default async function SignalDetailPage({ params }: { params: { id: strin
                           <PostStatusBadge status={p.status} />
                           {p.contentAngle && <span className="text-muted-foreground line-clamp-1">· {p.contentAngle}</span>}
                           {p.hookStrengthScore != null && (
-                            <span className="text-primary/70 font-medium">Hook {(p.hookStrengthScore / 20).toFixed(1)}/5</span>
+                            <span className="text-primary/70 font-medium">Hook {p.hookStrengthScore}/100</span>
                           )}
                           <span className="text-muted-foreground">{timeAgo(p.createdAt)}</span>
                         </div>

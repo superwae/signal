@@ -162,7 +162,7 @@ export default async function DraftsPage({ searchParams }: { searchParams: { tab
                     )}
                     {p.hookStrengthScore != null && (
                       <span className="text-primary/70 font-medium">
-                        Hook {(p.hookStrengthScore / 20).toFixed(1)}/5
+                        Hook {p.hookStrengthScore}/100
                       </span>
                     )}
                     <span className="text-muted-foreground/40">·</span>

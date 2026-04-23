@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, schema } from "@/lib/db";
-import { isNotNull, eq, inArray } from "drizzle-orm";
+import { isNotNull, eq, inArray, and } from "drizzle-orm";
 import { getValidFathomToken, fetchFathomMeetings } from "@/lib/fathom";
 import { generatePostsFromTranscript } from "@/lib/claude";
 
@@ -41,7 +41,10 @@ export async function GET(req: NextRequest) {
         ? await db
             .select({ sourceMeetingId: schema.signals.sourceMeetingId })
             .from(schema.signals)
-            .where(inArray(schema.signals.sourceMeetingId, meetingIds))
+            .where(and(
+              inArray(schema.signals.sourceMeetingId, meetingIds),
+              eq(schema.signals.recommendedAuthorId, author.id),
+            ))
         : [];
       const existingIds = new Set(existing.map((e) => e.sourceMeetingId));
 

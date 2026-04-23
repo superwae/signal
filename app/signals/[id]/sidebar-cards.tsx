@@ -377,7 +377,6 @@ export function SignalStatsPanel({
 }
 
 function QualityBar({ label, value }: { label: string; value: number }) {
-  const rating = (value / 20).toFixed(1);
   const color =
     value >= 75 ? "from-emerald-500 to-emerald-400"
     : value >= 50 ? "from-amber-500 to-amber-400"
@@ -388,7 +387,7 @@ function QualityBar({ label, value }: { label: string; value: number }) {
       <div className="mb-1 flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
         <span className="font-semibold tabular-nums">
-          {rating}<span className="text-muted-foreground">/5</span>
+          {value}<span className="text-muted-foreground">/100</span>
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">

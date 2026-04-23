@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/lib/db";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { getValidGoogleToken, fetchGoogleMeetTranscripts } from "@/lib/google";
 import { generatePostsFromTranscript } from "@/lib/claude";
 
@@ -23,14 +23,17 @@ export async function POST(
   const meetings = await fetchGoogleMeetTranscripts(token, 10);
   if (!meetings.length) return NextResponse.json({ ok: true, synced: 0, meetings: 0 });
 
-  // Deduplicate by Google Doc file ID stored as sourceMeetingId on transcripts
+  // Deduplicate per author: skip only if this author already has signals from this meeting
   const fileIds = meetings.map((m) => m.id);
-  const existingTranscripts = fileIds.length
-    ? await db.select({ sourceMeetingId: schema.transcripts.sourceMeetingId })
-        .from(schema.transcripts)
-        .where(inArray(schema.transcripts.sourceMeetingId, fileIds))
+  const existingSignals = fileIds.length
+    ? await db.select({ sourceMeetingId: schema.signals.sourceMeetingId })
+        .from(schema.signals)
+        .where(and(
+          inArray(schema.signals.sourceMeetingId, fileIds),
+          eq(schema.signals.recommendedAuthorId, authorId),
+        ))
     : [];
-  const existingIds = new Set(existingTranscripts.map((t) => t.sourceMeetingId));
+  const existingIds = new Set(existingSignals.map((s) => s.sourceMeetingId));
 
   const newMeetings = meetings.filter((m) => !existingIds.has(m.id));
   if (!newMeetings.length) return NextResponse.json({ ok: true, synced: 0, meetings: meetings.length });
@@ -53,14 +56,20 @@ export async function POST(
 
   for (const meeting of newMeetings) {
     try {
-      // Store transcript
-      const [transcriptRow] = await db.insert(schema.transcripts).values({
+      // Reuse existing transcript if already stored, otherwise insert
+      const existingTranscript = await db.select()
+        .from(schema.transcripts)
+        .where(eq(schema.transcripts.sourceMeetingId, meeting.id))
+        .limit(1)
+        .then((r) => r[0] ?? null);
+
+      const transcriptRow = existingTranscript ?? (await db.insert(schema.transcripts).values({
         title: meeting.title,
         content: meeting.transcript,
         source: "google_meet",
         sourceMeetingId: meeting.id,
         sourceMeetingDate: meeting.date ? new Date(meeting.date) : null,
-      }).returning();
+      }).returning().then((r) => r[0]));
 
       const generated = await generatePostsFromTranscript(meeting.transcript, authorContexts);
       if (!generated.length) continue;

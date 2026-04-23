@@ -375,16 +375,17 @@ export async function scorePost(text: string): Promise<{
 
 STEP 3 — Post Scoring:
 
-Score on five LinkedIn-specific dimensions (0-100 each):
-- hook_strength: Do the first 1-2 lines stop a scroll? Specific, surprising, tension-inducing = high. Generic, corporate, vague = low.
-- specificity: Does the post use concrete numbers, names, moments? Abstraction soup = low.
-- clarity: Is the message immediately clear? No jargon, no ambiguity, reader knows exactly what the point is = high.
-- emotional_resonance: Does it stir curiosity, empathy, inspiration, or recognition in the reader? Flat and transactional = low.
-- call_to_action: Does it compel the reader to engage (comment, share, reflect, act)? Explicit or implicit CTA, strong close = high. Post that just ends = low.
+You are a brutal LinkedIn content editor. Score 0-100 on five dimensions. Most posts score 20-50. Only truly exceptional content earns above 70. Be harsh.
 
-Be critical, not nice. Penalize vagueness heavily.
+- hook_strength: Do the first 1-2 lines FORCE a scroll-stop? Must be specific, surprising, or create real tension. "I learned something important" = 5. Generic openers, questions starting with "Have you ever", motivational fluff = under 15. Only a genuinely arresting first line earns above 60.
+- specificity: Concrete numbers, real names, exact moments, measurable outcomes = high. Any vague language, abstract claims, or "many people" constructions = deduct heavily. A post with zero hard specifics = under 20.
+- clarity: Is the single main point crystal clear within 5 seconds? Jargon, hedging, meandering = low. Conflicting messages = under 20. Perfect clarity = 80+.
+- emotional_resonance: Does it provoke a genuine reaction — curiosity, recognition, surprise, empathy? Flat, informational, or transactional posts score under 25. Real emotional punch = 70+.
+- call_to_action: Does it compel engagement with a strong close? Posts that just trail off = under 15. Weak "let me know" = under 30. A post that earns its ask = 60+.
 
-Return ONLY valid JSON: { "hook_strength": <int>, "specificity": <int>, "clarity": <int>, "emotional_resonance": <int>, "call_to_action": <int>, "notes": "one short sentence of feedback" }`,
+Default to skepticism. A mediocre post that does nothing special should average 25-35. Reserve 70+ for work that genuinely stands out. Penalize AI-sounding language, empty inspiration, and corporate speak aggressively.
+
+Return ONLY valid JSON: { "hook_strength": <int>, "specificity": <int>, "clarity": <int>, "emotional_resonance": <int>, "call_to_action": <int>, "notes": "one blunt sentence of feedback" }`,
     user: `Post:\n"""${text}"""`,
   });
   const parsed = extractJson<{

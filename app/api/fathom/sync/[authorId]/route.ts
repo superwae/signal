@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { db, schema } from "@/lib/db";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { getValidFathomToken, fetchFathomMeetings } from "@/lib/fathom";
 import { generatePostsFromTranscript } from "@/lib/claude";
 
@@ -32,7 +32,10 @@ export async function POST(
     ? await db
         .select({ sourceMeetingId: schema.signals.sourceMeetingId })
         .from(schema.signals)
-        .where(inArray(schema.signals.sourceMeetingId, meetingIds))
+        .where(and(
+          inArray(schema.signals.sourceMeetingId, meetingIds),
+          eq(schema.signals.recommendedAuthorId, authorId),
+        ))
     : [];
   const existingIds = new Set(existing.map((e) => e.sourceMeetingId));
 

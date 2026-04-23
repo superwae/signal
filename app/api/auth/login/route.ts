@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 import { verifyPassword } from "@/lib/password";
-import { hashToken, SUPERADMIN_EMAIL } from "@/lib/auth";
+import { SUPERADMIN_EMAIL } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json().catch(() => ({}));
@@ -32,10 +33,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const secret = process.env.AUTH_SECRET ?? "";
+  // Single-session enforcement: delete all previous sessions for this email
+  await db.delete(schema.sessions).where(eq(schema.sessions.email, normalizedEmail)).catch(() => {});
+
+  // Create a new session valid for 24 hours
+  const sessionToken = randomBytes(48).toString("hex");
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await db.insert(schema.sessions).values({ email: normalizedEmail, token: sessionToken, expiresAt });
+
   const res = NextResponse.json({ ok: true });
-  const cookieOpts = { sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 30 };
-  res.cookies.set("signal_auth", hashToken(secret), { ...cookieOpts, httpOnly: true });
+  const cookieOpts = { sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 };
+  res.cookies.set("signal_auth", sessionToken, { ...cookieOpts, httpOnly: true });
   res.cookies.set("signal_email", normalizedEmail, { ...cookieOpts, httpOnly: true });
   return res;
 }

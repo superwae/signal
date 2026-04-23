@@ -9,6 +9,7 @@ import { timeAgo } from "@/lib/utils";
 import { Plus, User, Archive, Radio, ArrowUpRight, FileText } from "lucide-react";
 import { SignalFilterBar } from "./filter-bar";
 import { getCurrentUser } from "@/lib/session";
+import { SendSignalButton } from "./send-signal-button";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,6 +50,20 @@ export default async function SignalsPage({
     db.select({ id: schema.contentAngles.id, name: schema.contentAngles.name }).from(schema.contentAngles).orderBy(schema.contentAngles.name),
     db.select({ id: schema.signals.id }).from(schema.signals).where(eq(schema.signals.status, "archived")).then((r) => r.length),
   ]);
+
+  // Draft post counts per signal (to show "Send to user" button)
+  const signalIds = signals.map((s) => s.id);
+  const draftPostCounts = signalIds.length
+    ? await db
+        .select({ signalId: schema.posts.signalId, count: sql<number>`count(*)::int` })
+        .from(schema.posts)
+        .where(and(
+          inArray(schema.posts.signalId, signalIds),
+          inArray(schema.posts.status, ["draft", "rejected"] as any[]),
+        ))
+        .groupBy(schema.posts.signalId)
+    : [];
+  const draftCountMap = new Map(draftPostCounts.map((r) => [r.signalId, r.count]));
 
   const authorMap = new Map(authors.map((a) => [a.id, a.name]));
   const isFiltered = !!(q || author || angle || from || to);
@@ -168,12 +183,11 @@ export default async function SignalsPage({
                   const firstLine = s.rawContent.split("\n").find((l) => l.trim()) ?? s.rawContent;
                   const taggedAngles = (s.contentAngles as string[] | null) ?? [];
                   return (
-                    <Link
+                    <div
                       key={s.id}
-                      href={`/signals/${s.id}`}
                       className="group flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-glow-sm hover:-translate-y-0.5"
                     >
-                      <div className="min-w-0 flex-1">
+                      <Link href={`/signals/${s.id}`} className="min-w-0 flex-1">
                         {(s as any).title && (
                           <p className="text-[11px] font-semibold text-blue-500/80 uppercase tracking-wide mb-0.5 truncate">{(s as any).title}</p>
                         )}
@@ -199,9 +213,16 @@ export default async function SignalsPage({
                           <span className="text-muted-foreground/40">·</span>
                           <span>{timeAgo(s.createdAt)}</span>
                         </div>
+                      </Link>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {(draftCountMap.get(s.id) ?? 0) > 0 && (
+                          <SendSignalButton signalId={s.id} />
+                        )}
+                        <Link href={`/signals/${s.id}`}>
+                          <ArrowUpRight className="h-4 w-4 text-muted-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                        </Link>
                       </div>
-                      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all duration-200 group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </Link>
+                    </div>
                   );
                 })}
               </div>

@@ -657,6 +657,18 @@ export async function submitForReviewAction(postId: number) {
   revalidatePath(`/posts/${postId}`);
 }
 
+export async function submitSignalDraftsForReviewAction(signalId: number) {
+  await requireAdmin();
+  await db
+    .update(schema.posts)
+    .set({ status: "in_review", updatedAt: new Date() })
+    .where(and(eq(schema.posts.signalId, signalId), inArray(schema.posts.status, ["draft", "rejected"] as any[])));
+  revalidatePath("/");
+  revalidatePath("/signals");
+  revalidatePath(`/signals/${signalId}`);
+  revalidatePath("/drafts");
+}
+
 export async function approvePostAction(postId: number, notes?: string) {
   const session = await requireAuth();
   const [post] = await db.select({ authorId: schema.posts.authorId }).from(schema.posts).where(eq(schema.posts.id, postId));

@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, and, gt } from "drizzle-orm";
 import { SUPERADMIN_EMAIL } from "@/lib/auth";
 
 export type SessionUser = {
@@ -15,7 +15,26 @@ export type SessionUser = {
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   const cookieStore = cookies();
   const email = cookieStore.get("signal_email")?.value?.toLowerCase().trim();
+  const sessionToken = cookieStore.get("signal_auth")?.value;
   if (!email) return null;
+
+  // Validate session token against DB (single-session enforcement + expiry)
+  if (sessionToken) {
+    const [session] = await db
+      .select()
+      .from(schema.sessions)
+      .where(and(
+        eq(schema.sessions.token, sessionToken),
+        eq(schema.sessions.email, email),
+        gt(schema.sessions.expiresAt, new Date()),
+      ))
+      .limit(1)
+      .catch(() => []);
+    if (!session) return null;
+  } else {
+    // No session token = not logged in
+    return null;
+  }
 
   // Hardcoded superadmin
   if (email === SUPERADMIN_EMAIL) {
