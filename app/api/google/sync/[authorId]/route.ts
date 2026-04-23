@@ -66,9 +66,6 @@ export async function POST(
       if (!generated.length) continue;
 
       const rows = generated.map((s) => {
-        const recAuthor = s.recommendedAuthorRole
-          ? authors.find((a) => a.role?.toLowerCase() === s.recommendedAuthorRole?.toLowerCase())
-          : undefined;
         const recFramework = s.frameworkName
           ? allFrameworks.find((f) => f.name.toLowerCase() === s.frameworkName!.toLowerCase())
           : undefined;
@@ -77,7 +74,7 @@ export async function POST(
           contentType: "post",
           speaker: null as string | null,
           contentAngles: s.contentAngle ? [s.contentAngle] : [] as string[],
-          recommendedAuthorId: recAuthor?.id ?? authorId,
+          recommendedAuthorId: authorId,
           bestFrameworkId: recFramework?.id ?? null,
           source: "google_meet" as const,
           sourceMeetingId: meeting.id,
