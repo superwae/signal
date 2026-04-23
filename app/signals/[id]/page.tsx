@@ -8,6 +8,7 @@ import { timeAgo } from "@/lib/utils";
 import { ArrowLeft, Radio, ArrowUpRight } from "lucide-react";
 import { PostEditor } from "./post-editor";
 import { AuthorCard, SignalAnglesCard, TranscriptCard, SignalStatsPanel, SourceExcerptCard } from "./sidebar-cards";
+import { SendToReviewButton } from "./send-to-review-button";
 import { ScoresProvider } from "./scores-provider";
 import { getCurrentUser } from "@/lib/session";
 
@@ -195,24 +196,31 @@ export default async function SignalDetailPage({ params }: { params: { id: strin
               </h3>
               <div className="grid gap-2">
                 {signalPosts.map((p) => (
-                  <Link
+                  <div
                     key={p.id}
-                    href={`/posts/${p.id}`}
-                    className="group flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-glow-sm hover:-translate-y-0.5"
+                    className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-sm">{p.content}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                        <PostStatusBadge status={p.status} />
-                        {p.contentAngle && <span className="text-muted-foreground line-clamp-1">· {p.contentAngle}</span>}
-                        {p.hookStrengthScore != null && (
-                          <span className="text-primary/70 font-medium">Hook {(p.hookStrengthScore / 20).toFixed(1)}/5</span>
-                        )}
-                        <span className="text-muted-foreground">{timeAgo(p.createdAt)}</span>
+                    <Link
+                      href={`/posts/${p.id}`}
+                      className="group flex min-w-0 flex-1 items-start gap-4 transition-all duration-200 hover:opacity-80"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-sm">{p.content}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                          <PostStatusBadge status={p.status} />
+                          {p.contentAngle && <span className="text-muted-foreground line-clamp-1">· {p.contentAngle}</span>}
+                          {p.hookStrengthScore != null && (
+                            <span className="text-primary/70 font-medium">Hook {(p.hookStrengthScore / 20).toFixed(1)}/5</span>
+                          )}
+                          <span className="text-muted-foreground">{timeAgo(p.createdAt)}</span>
+                        </div>
                       </div>
-                    </div>
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                  </Link>
+                      <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-all group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </Link>
+                    {(p.status === "draft" || p.status === "rejected") && (
+                      <SendToReviewButton postId={p.id} />
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
