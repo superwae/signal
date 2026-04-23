@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 
-const NO_SIDEBAR_PATHS: string[] = [];
+const NO_SIDEBAR_PATHS: string[] = ["/login"];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
