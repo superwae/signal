@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { randomBytes } from "crypto";
 import { db, schema } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 
 const FATHOM_AUTHORIZE_URL =
   process.env.FATHOM_AUTHORIZE_URL ?? "https://fathom.video/external/v1/oauth2/authorize";
@@ -12,6 +13,11 @@ export async function GET(req: NextRequest) {
   const authorId = req.nextUrl.searchParams.get("authorId");
   if (!authorId) {
     return NextResponse.json({ error: "authorId required" }, { status: 400 });
+  }
+
+  const session = await getCurrentUser();
+  if (!session?.isAdmin && session?.authorId !== Number(authorId)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
   }
 
   if (!FATHOM_CLIENT_ID) {

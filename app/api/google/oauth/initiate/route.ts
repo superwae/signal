@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { randomBytes } from "crypto";
 import { db, schema } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 
 const GOOGLE_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID ?? "";
@@ -10,6 +11,12 @@ const APP_BASE_URL = process.env.APP_BASE_URL?.trim() ?? "https://signal-umber-t
 export async function GET(req: NextRequest) {
   const authorId = req.nextUrl.searchParams.get("authorId");
   if (!authorId) return NextResponse.json({ error: "authorId required" }, { status: 400 });
+
+  const session = await getCurrentUser();
+  if (!session?.isAdmin && session?.authorId !== Number(authorId)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
+
   if (!GOOGLE_CLIENT_ID) return NextResponse.json({ error: "GOOGLE_CLIENT_ID not configured" }, { status: 500 });
 
   const state = randomBytes(32).toString("hex");

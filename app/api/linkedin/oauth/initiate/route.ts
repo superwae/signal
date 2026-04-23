@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { randomBytes } from "crypto";
 import { db, schema } from "@/lib/db";
+import { getCurrentUser } from "@/lib/session";
 
 const LINKEDIN_AUTHORIZE_URL = "https://www.linkedin.com/oauth/v2/authorization";
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID ?? "";
@@ -13,6 +14,11 @@ export async function GET(req: NextRequest) {
   const authorId = req.nextUrl.searchParams.get("authorId");
   if (!authorId) {
     return NextResponse.json({ error: "authorId required" }, { status: 400 });
+  }
+
+  const session = await getCurrentUser();
+  if (!session?.isAdmin && session?.authorId !== Number(authorId)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
   }
 
   if (!LINKEDIN_CLIENT_ID) {

@@ -1,8 +1,9 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db, schema } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/session";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { timeAgo } from "@/lib/utils";
@@ -21,6 +22,10 @@ export const fetchCache = "force-no-store";
 
 export default async function AuthorDetailPage({ params }: { params: { id: string } }) {
   const id = Number(params.id);
+  const session = await getCurrentUser();
+  // Admins can view any author; regular users can only view their own profile
+  if (!session?.isAdmin && session?.authorId !== id) redirect("/settings");
+
   const [author] = await db.select().from(schema.authors).where(eq(schema.authors.id, id));
   if (!author) notFound();
 

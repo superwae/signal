@@ -1,10 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   const { authorId } = await req.json();
   if (!authorId) return NextResponse.json({ error: "authorId required" }, { status: 400 });
+
+  const session = await getCurrentUser();
+  if (!session?.isAdmin && session?.authorId !== Number(authorId)) {
+    return NextResponse.json({ error: "Not authorised" }, { status: 403 });
+  }
 
   await db
     .update(schema.authors)
