@@ -69,7 +69,7 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(215,52%,7%)] p-6 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6 relative overflow-hidden">
       {/* Background blobs */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-cyan-500/8 blur-3xl pointer-events-none" />
@@ -81,39 +81,37 @@ function LoginForm() {
             <div className="absolute inset-0 rounded-2xl bg-blue-500/25 blur-xl scale-110" />
             <SignalLogoLarge />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Signal</h1>
-          <p className="text-sm text-blue-300/50 mt-1 tracking-widest uppercase text-[10px] font-medium">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Signal</h1>
+          <p className="text-muted-foreground mt-1 tracking-widest uppercase text-[10px] font-medium">
             content automation
           </p>
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-6 shadow-glow-sm">
+        <div className="rounded-2xl border border-border bg-card backdrop-blur-sm p-6 shadow-glow-sm">
           <div className="mb-5">
-            <h2 className="text-lg font-semibold text-white">Welcome back</h2>
-            <p className="text-sm text-blue-200/40 mt-0.5">Sign in to your team workspace</p>
+            <h2 className="text-lg font-semibold text-foreground">Welcome back</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Sign in to your team workspace</p>
           </div>
 
           <form onSubmit={submit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-blue-200/60 text-xs font-medium">Email</Label>
+              <Label className="text-muted-foreground text-xs font-medium">Email</Label>
               <Input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
                 placeholder="you@company.com"
                 required
-                className="bg-white/[0.06] border-white/10 text-white placeholder:text-blue-300/25 focus-visible:ring-blue-500/50 focus-visible:border-blue-500/50"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-blue-200/60 text-xs font-medium">Password</Label>
+              <Label className="text-muted-foreground text-xs font-medium">Password</Label>
               <Input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 type="password"
                 required
-                className="bg-white/[0.06] border-white/10 text-white placeholder:text-blue-300/25 focus-visible:ring-blue-500/50 focus-visible:border-blue-500/50"
               />
             </div>
 
@@ -125,16 +123,13 @@ function LoginForm() {
             )}
 
             <Button type="submit" disabled={loading} className="w-full mt-2" size="lg">
-              {loading
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : null
-              }
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
         </div>
 
-        <p className="text-center text-[11px] text-blue-300/25 mt-6">
+        <p className="text-center text-[11px] text-muted-foreground/50 mt-6">
           Shared team access · Ask Wael for the password
         </p>
       </div>
