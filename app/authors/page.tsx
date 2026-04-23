@@ -85,7 +85,7 @@ export default async function AuthorsPage() {
         )}
       </header>
 
-      {!isSuperAdmin && (
+      {!isAdmin && (
         authors.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-12 text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10">
@@ -142,7 +142,7 @@ export default async function AuthorsPage() {
       )}
 
       {isAdmin && (
-        <div className={isSuperAdmin ? "" : "mt-10"}>
+        <div>
           <TeamManager users={users} isSuperAdmin={isSuperAdmin ?? false} />
         </div>
       )}

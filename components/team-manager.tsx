@@ -88,7 +88,7 @@ export function TeamManager({ users, isSuperAdmin }: { users: UserWithAuthor[]; 
                 <div className="flex items-center gap-2 shrink-0">
                   {!u.active && <Badge variant="outline" className="text-[10px] text-amber-500 border-amber-500/40">Pending</Badge>}
                   <Badge variant={isAdmin ? "default" : "secondary"} className="text-[10px]">{u.role}</Badge>
-                  {isAdmin && u.authorId && <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                  {u.authorId && <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/40" />}
                   <button
                     onClick={(e) => { e.preventDefault(); handleRemove(u.id); }}
                     disabled={isPending}
@@ -100,7 +100,7 @@ export function TeamManager({ users, isSuperAdmin }: { users: UserWithAuthor[]; 
               </div>
             );
 
-            return isAdmin && u.authorId ? (
+            return u.authorId ? (
               <li key={u.id}>
                 <Link
                   href={`/authors/${u.authorId}`}
